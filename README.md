@@ -33,7 +33,7 @@ The tests are run in both 50Hz and 60Hz (screen will blink during change).
 
 ### Dependencies & Build ##
 * Tried to make this independent of various libraries. This to make everything as light and transparent as possible.
-* Wanted to use as many BIOS-support as possible, to reduce code and stay as easy to read for others.
+* Wanted to use as many BIOS-calls as possible, to reduce code and stay as easy to read for others.
 * [SDCC](https://sdcc.sourceforge.net/) v4.2 or later, is needed though, to enable C.
 * Batch files are made for *Windows*, but should be easy to mod for other platforms. 
 * (Optional) uncomment a line and `python` generates `.sym`-files which *openmsx* understands.
