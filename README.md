@@ -31,12 +31,13 @@ The tests are run in both 50Hz and 60Hz (screen will blink during change).
 ### Background ###
 * It all stems from the waitcycles reported on MSX-Engine T9769A/B/C: https://www.msx.org/wiki/Toshiba_T9769 
 
-### Dependencies ##
+### Dependencies & Build ##
 * Tried to make this independent of various libraries. This to make everything as light and transparent as possible.
 * Wanted to use as many BIOS-support as possible, to reduce code and stay as easy to read for others.
 * [SDCC](https://sdcc.sourceforge.net/) v4.2 or later, is needed though, to enable C.
-* Batch files are made for *Windows*, but should be easy to mod for other platforms.
+* Batch files are made for *Windows*, but should be easy to mod for other platforms. 
 * (Optional) uncomment a line and `python` generates `.sym`-files which *openmsx* understands.
+* If you use an emulator, edit run.bat to fit your paths/tools.
 
 ### Target platform / environment ###
 * You need *MSXDOS*. Put into `dska`. - We've seen that *MSXDOS* has been involved when an additional delay have been reported. Therefore this tool has been made in *MSXDOS*. It is furthermore convenient that *MSXDOS* simplifies slot handling. It improves compatibility, it starts with 64 kB RAM, in IM 1 and thus has 0x0038 easily available from the outset, reducing complexity.
