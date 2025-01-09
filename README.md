@@ -40,7 +40,7 @@ The tests are run in both 50Hz and 60Hz (screen will blink during change).
 * If you use an emulator, edit `run.bat` to fit your paths/tools.
 
 ### Target platform / environment ###
-* You need *MSXDOS*. Put into `dska`. - We've seen that *MSXDOS* has been involved when an additional delay have been reported. Therefore this tool has been made in *MSXDOS*. It is furthermore convenient that *MSXDOS* simplifies slot handling. It improves compatibility, it starts with 64 kB RAM, in IM 1 and thus has 0x0038 easily available from the outset, reducing complexity.
+* You need *MSXDOS*. Put into `dska/`. - We've seen that *MSXDOS* has been involved when an additional delay have been reported. Therefore this tool has been made in *MSXDOS*. It is furthermore convenient that *MSXDOS* simplifies slot handling. It improves compatibility, it starts with 64 kB RAM, in IM 1 and thus has 0x0038 easily available from the outset, reducing complexity.
 
 ### Weaknesses ###
 * Unsure if there are circumstances that are not covered in the test that may affect the timings.
