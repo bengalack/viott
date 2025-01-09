@@ -23,10 +23,10 @@ The tests are run in both 50Hz and 60Hz (screen will blink during change).
 
 ### Output examples ###
 
-<img src="https://raw.githubusercontent.com/bengalack/voitt/refs/heads/main/img/a1-st.jpeg" />
-<img src="https://raw.githubusercontent.com/bengalack/voitt/refs/heads/main/img/ax-370.jpeg" />
-<img src="https://raw.githubusercontent.com/bengalack/voitt/refs/heads/main/img/hb-f1xd.jpeg" />
-<img src="https://raw.githubusercontent.com/bengalack/voitt/refs/heads/main/img/svi-738.jpeg" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/a1-st.jpeg" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/ax-370.jpeg" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/hb-f1xd.jpeg" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/svi-738.jpeg" />
 
 ### Background ###
 * It all stems from the waitcycles reported on MSX-Engine T9769A/B/C: https://www.msx.org/wiki/Toshiba_T9769 
@@ -46,4 +46,4 @@ The tests are run in both 50Hz and 60Hz (screen will blink during change).
 * Unsure if there are circumstances that are not covered in the test that may affect the timings.
 
 ### Download executable ###
-You can download the latest pre-built `.com` file here: [/dska/voitt.com](https://github.com/bengalack/voitt/raw/refs/heads/main/dska/viott.com)
+You can download the latest pre-built `.com` file here: [/dska/viott.com](https://github.com/bengalack/viott/raw/refs/heads/main/dska/viott.com)
