@@ -13,7 +13,7 @@ I enable a custom, lightweight ISR, add tons of unrolled I/O-commands, and read 
 * The available cycles per frame is constant across MSX2 (and up) models when running in z80-mode. I [have no guarantee](https://www.msx.org/forum/msx-talk/general-discussion/msx-models-deviating-from-standard-358mhz) this being constant, but it is part of this model. Small deviations here will result in small "rounding-errors" in the final report.
 * The cost of kicking off an interrupt: **14 cycles**.
 
-We measure multiple sets of these, to see if there are any deviations (as [the interrupt seems to be a inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations.
+We measure multiple sets of these, to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations.
 
     const float g_afFrmTotalCycles[] = {59736.0, 71364.0};  // NTSC, PAL
 
