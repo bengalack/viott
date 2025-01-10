@@ -1,7 +1,7 @@
 # VIOTT - VDP I/O Timing Tester
 Test **MSX2 (and above)** VDPs for added wait cycles - which are reported on various systems/engines. Written in C with help from assembly.
 
-**Idea:** Figure out if I/O commands towards the VDP take longer time than expected (current test tests `out`, but `in` variants are easy to add).
+**Idea:** Figure out if I/O commands towards the VDP take longer time than expected.
 
 **The concept on how to achieve this**, is a simple concept: As we know the amount of cycles per frame on a standard MSX2, we measure how many I/O commands we were able to execute during that time.
 
