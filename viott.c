@@ -5,6 +5,8 @@
 // It is using a custom ISR which does not do much other than storing the
 // current address of the program pointer, at address: g_pPCReg
 //
+// Adding a test: See all places ADD_ENTRY is commented
+//
 // Assumptions:
 //  * We start in DOS, hence 0x0038 already contains 0xC3 (jp)
 //  * There are no line interrupts enabled
@@ -14,8 +16,8 @@
 //
 // Notes:
 //  * There is no support for global initialisation of RAM variables in this config
-//  * SORRY! for the Hungarian notation, but is helps me when mixing asm and c
 //  * Likely some C programming shortcomings - I don't have much experience with C
+//  * SORRY! for the Hungarian notation, but is helps me when mixing asm and c
 //  * Others:
 //      Prefixes:
 //      * u  = unsigned char  (u8)
@@ -40,6 +42,7 @@
 // Typedefs & defines --------------------------------------------------------
 //
 #define NUM_ITERATIONS      128 // similar to VATT iterations
+// #define NUM_ITERATIONS      16
 
 typedef unsigned char       u8;
 typedef unsigned short      u16;
@@ -52,7 +55,7 @@ typedef const void          callable( void );
 #define disableInterrupt()	{ __asm di;   __endasm; }
 #define break()				{ __asm in a,(0x2e);__endasm; } // for debugging. may be risky to use as it trashes A
 
-enum test_variant { TEST_OUTI, TEST_OUT, TEST_COUNT };
+enum test_variant { TEST_OUTI, TEST_OUT, TEST_IN, TEST_INX, TEST_COUNT }; // ADD_ENTRY
 enum freq_variant { NTSC, PAL, FREQ_COUNT };
 
 // Declarations (see .s-file) ------------------------------------------------
@@ -66,19 +69,21 @@ void print(u8* szMessage);
 bool getPALRefreshRate();
 void setPALRefreshRate(bool bPAL);
 void customISR();
-void setVRAMWriteAddressNI(u8 uHighBit, u16 nVRAMAddress);
+void setVRAMAddressNI(u8 uBitCodes, u16 nVRAMAddress);
 
 // tests
-void testRunOUTI();
-void testRunOUT();
+void testRunOUTI(); // ADD_ENTRY
+void testRunOUT(); // ADD_ENTRY
+void testRunIN(); // ADD_ENTRY
 
-extern void*            testRunOUTIBaseline;
-extern void*            testRunOUTBaseline;
+extern void*            testRunOUTIBaseline; // ADD_ENTRY
+extern void*            testRunOUTBaseline; // ADD_ENTRY
+extern void*            testRunINBaseline; // ADD_ENTRY
 
 // Consts / ROM friendly -----------------------------------------------------
 //
 const u8                g_szErrorMSX[]      =  "MSX2 and above is required";
-const u8                g_szGreeting[]      =  "VDP I/O Timing Test z80/v1.0\r\n";
+const u8                g_szGreeting[]      =  "VDP I/O Timing Test z80/v1.1\r\n";
 const u8                g_szWait[]          =  "...please wait 30 secs or so";
 const u8                g_szRemoveWait[]    =  "\r                            \r";
 const u8                g_szReportHdr[]     =  "Report: %d repeats\n\r";
@@ -89,9 +94,10 @@ const u8                g_szReportValues[]  =  "% 4s %04hu.%02d %04hu %04hu %d.%
 const u8                g_szNewline[]       =  "\r\n";
 
 const u8* const         g_aszFreqNames[]    = {"NTSC-60Hz", "PAL-50Hz"};
-const callable* const   g_apTestFunction[]  = {&testRunOUTI, &testRunOUT}; // opens up for x amount of tests (as long as mem permits)
-const void* const       g_apTestBaseline[]  = {&testRunOUTIBaseline, &testRunOUTBaseline};
-const u8* const         g_aszTestNames[]    = {"outi", "out"};
+const callable* const   g_apTestFunction[]  = {&testRunOUTI, &testRunOUT, &testRunIN, &testRunIN}; // ADD_ENTRY
+const void* const       g_apTestBaseline[]  = {&testRunOUTIBaseline, &testRunOUTBaseline, &testRunINBaseline, &testRunINBaseline}; // ADD_ENTRY
+const bool              g_abTestRead[]      = {false, false, true, false}; // ADD_ENTRY
+const u8* const         g_aszTestNames[]    = {"outi", "out", "in", "inx"}; // ADD_ENTRY
 const float             g_afFrmTotalCycles[]= {59736.0, 71364.0};
 
 const u16               FRAME_CYCLES_INT            = 215;
@@ -133,17 +139,22 @@ void restoreOriginalISR()
 // ---------------------------------------------------------------------------
 // Just set write address to upper 64kB area. We will not see this garbage
 // on screen while in DOS prompt/screen
-void prepareVDP()
+void prepareVDP( bool bRead )
 {
-    disableInterrupt();
-    setVRAMWriteAddressNI(1, 0x0000);
+    disableInterrupt(); // generates "info 218: z80instructionSize() failed to parse line node, assuming 999 bytes" - dunno why, SDCC funkiness
+
+    if( bRead )
+        setVRAMAddressNI(1|0x40, 0x0000);
+    else
+        setVRAMAddressNI(1|0x00, 0x0000);
+
     enableInterrupt();
 }
 
 // ---------------------------------------------------------------------------
 void runIteration(enum freq_variant eFreq, enum test_variant eTest, u8 uIterationNum )
 {
-    prepareVDP();
+    prepareVDP( g_abTestRead[ eTest ] );
 
     g_apTestFunction[ eTest ]();
 

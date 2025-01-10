@@ -28,9 +28,6 @@
     VDP_REG9    .equ 0xFFE8             ; mirror
     FRQ_BITMASK .equ #0b00000010        ; to be used with VDP_REG9
 
-    REPEATS     .equ 6250               ; this is PAL cycles + buffer / OUT cycle cost (75000/12),
-                                        ; the cheapest instruction. Note: Size may be great!
-
 ; ----------------------------------------------------------------------------
 ; EXTERNAL REFERENCES
     .globl      _g_bStorePCReg
@@ -42,9 +39,10 @@
 ; massive unrolled out/variants
 
 ; ------------------
-; OUTI
+; Common start
 ; ------------------
-_testRunOUTI::
+commonStartForAllTests:
+
     halt                                ; ensure that the following commands are not interrupted (di/ei is not safe!)
 
     xor     a
@@ -52,38 +50,57 @@ _testRunOUTI::
     inc     a
     ld      (_g_bStorePCReg), a         ; true
 
+    ret
+
+; ------------------
+; Common end
+; ------------------
+commonTestRetSpot::
+    ret
+
+; ------------------
+; OUTI (ADD_ENTRY)
+; ------------------
+_testRunOUTI::
+    call    commonStartForAllTests
     ld      hl, #0x0000                 ; this one is just random
     ld      c, #VDPIO  
     halt
 
 _testRunOUTIBaseline::
-.rept REPEATS
+.rept (75000/18)                        ; repeats are, at max, a huge frame (PAL) split into the minimum cost of an instruction
     outi
 .endm
 
-_testRunOUTI_end::
     ret
 
 ; ------------------
-; OUT
+; OUT (ADD_ENTRY)
 ; ------------------
 _testRunOUT::
-    halt                                ; ensure that the following commands are not interrupted (di/ei is not safe!)
-
-    xor     a
-    ld      (_g_bToggle), a             ; false
-    inc     a
-    ld      (_g_bStorePCReg), a         ; true
-
+    call    commonStartForAllTests
     ld      a, #0x00                    ; this one is just random
     halt
 
 _testRunOUTBaseline::
-.rept REPEATS
-    out(VDPIO), a                     ; this will break the speed limits, but our focus is something else
+.rept (75000/12)                        ; repeats are, at max, a huge frame (PAL) split into the minimum cost of an instruction
+    out     (VDPIO), a                     ; this will break the speed limits, but our focus is something else
 .endm
 
-_testRunOUT_end::
+    ret
+
+; ------------------
+; IN (ADD_ENTRY)
+; ------------------
+_testRunIN::
+    call    commonStartForAllTests
+    halt
+
+_testRunINBaseline::
+.rept (75000/12)                        ; repeats are, at max, a huge frame (PAL) split into the minimum cost of an instruction
+    in      a, (VDPIO)                  ; this will break the speed limits, but our focus is something else
+.endm
+
     ret
 
 ; ----------------------------------------------------------------------------
@@ -121,13 +138,17 @@ _setPALRefreshRate::
     ret
 
 ; ----------------------------------------------------------------------------
-; Enable VDP port #98 for start writing at address ADE
-; IN:       A:  VRAM address, bit 17
+; Enable VDP port #98 for start writing at address (A&3)DE 
+; IN:       A:  Bits: 0W0000UU, W = Write, U means Upper VRAM address(bit 17-18)
 ;           DE: VRAM address, 16 lowest bits
-; MODIFIES: AF, DE
+; MODIFIES: AF, B, DE
 ;
-; setVRAMWriteAddressNI(u8 uHighBit, u16 nVRAMAddress);
-_setVRAMWriteAddressNI::
+; setVRAMAddressNI(u8 uBitCodes, u16 nVRAMAddress);
+_setVRAMAddressNI::
+
+    ld      b, a
+    and     #3                      ; first bits
+
 	rlc     d
 	rla
 	rlc     d
@@ -141,8 +162,13 @@ _setVRAMWriteAddressNI::
 
 	ld      a, e                    ; set bits 0-7
 	out     (#VDPPORT1), a
+
+    ld      a, b                    ; prepare write flag in b
+    and     #0b01000000
+    ld      b, a   
+
 	ld      a, d                    ; set bits 8-13
-	or      #0x40                   ; + write access via bit 6
+	or      b                       ; + write access via bit 6?
 	out     (#VDPPORT1), a       
     ret
 
@@ -194,7 +220,7 @@ _customISR::
 	ld		a, (hl)
 	ld		(_g_pPCReg+1), a        ; high byte
 
-    ld      bc, # _testRunOUTI_end  ; force return-to address: where next instruction is RET
+    ld      bc, #commonTestRetSpot  ; force return-to address: where next instruction is RET
     ld      (hl), b                 ; this block is not 100% needed, but speeds up total execution (alt: dec sp x2 at the end)
     dec     hl
     ld      (hl), c
