@@ -17,7 +17,7 @@ We measure multiple sets of these, to see if there are any deviations (as [the i
 
     const float g_afFrmTotalCycles[] = {59736.0, 71364.0};  // NTSC, PAL
 
-    NUM_ITERATIONS = 128;                                   // default (which seem way over the top -  needed at all?)
+    NUM_ITERATIONS = 128; // default (which seem way over the top -  needed at all?)
 
 The tests are run in both 50Hz and 60Hz (screen will blink during change).
 
