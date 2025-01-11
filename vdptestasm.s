@@ -180,8 +180,8 @@ _setVRAMAddressNI::
 ; Cost: 215 (on first, when g_bStorePCReg==true and g_bToggle==0)
 ; + CPU kicking this off should be: +13+1 (13 according to this:
 ; http://www.z80.info/interrup.htm) and then I assume there is at least one M1
-; wait cycle. Furthermore there is "JP _customISR" at 0x0028 (=18 cycles)
-; Totals: 247 cycles
+; wait cycle. Furthermore there is "JP _customISR" at 0x0038 (=11 cycles)
+; Totals: 240 cycles
 ;
 ; MODIFIES: (No registers of course!)
 ;

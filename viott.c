@@ -101,7 +101,7 @@ const u8* const         g_aszTestNames[]    = {"outi", "out", "in", "inx"}; // A
 const float             g_afFrmTotalCycles[]= {59736.0, 71364.0};
 
 const u16               FRAME_CYCLES_INT            = 215;
-const u16               FRAME_CYCLES_INT_KICK_OFF   = 14 + 18; 
+const u16               FRAME_CYCLES_INT_KICK_OFF   = 14 + 11; // +11 is the JP at 0x0038
 
 // RAM variables -------------------------------------------------------------
 //
