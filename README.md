@@ -20,10 +20,12 @@ One test is added at the end, to test the I/O command towards non-VDP ports for 
 
 ### Output examples ###
 
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/a1-st.jpeg" />
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/ax-370.jpeg" />
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/hb-f1xd.jpeg" />
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/svi-738.jpeg" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/AX-370_2.JPEG" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/NMS-8245.JPEG" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/HB-F1XD_2.JPEG" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/HB-F1XDJ.JPEG" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/A1-ST_2.JPEG" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/svi-738_2.JPEG" />
 
 ### Background ###
 * It all stems from the waitcycles reported on MSX-Engine T9769A/B/C: https://www.msx.org/wiki/Toshiba_T9769 
