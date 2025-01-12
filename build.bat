@@ -9,4 +9,4 @@ sdcc --code-loc 0x010E --data-loc 0 -mz80 --no-std-crt0 --opt-code-speed objs\do
 @REM -s argument is n*16384, where default is n=2 (amend when you get 'error: size of the buffer is too small')
 makebin -s 49152 -p -o 0x100 objs\%NAME%.ihx dska\%NAME%.com
 
-@REM python makesymbolfile.py objs %NAME%
+python makesymbolfile.py objs %NAME%
