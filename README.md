@@ -3,23 +3,20 @@ Test **MSX2 (and above)** VDPs for added wait cycles - which are reported on var
 
 **Idea:** Figure out if I/O commands towards the VDP take longer time than expected.
 
-**The concept on how to achieve this**, is a simple concept: As we know the amount of cycles per frame on a standard MSX2, we measure how many I/O commands we were able to execute during that time.
+**The concept on how to achieve this**, is a simple concept: We measure the amount of cycles we can spend during a frame, by using normal, non-I/O instructions. Then we run frames with I/O instructions only, and by measuring how many instructions we were able to execute during that time, we find the cost of each I/O instruction.
 
 I enable a custom, lightweight ISR, add tons of unrolled I/O-commands, and read the value of the PC-register when the frame is finished.
 
-    I/O command cycle cost = ( frame total time - ISR time) /  number of instructions executed
+    I/O command cycle cost = available frame total time / number of I/O instructions executed
 
 **Assumptions:**
-* The available cycles per frame is constant across MSX2 (and up) models when running in z80-mode. I [have no guarantee](https://www.msx.org/forum/msx-talk/general-discussion/msx-models-deviating-from-standard-358mhz) this being constant, but it is part of this model. Small deviations here will result in small "rounding-errors" in the final report.
-* The cost of kicking off an interrupt: **14 cycles**.
+* The cost of kicking off an interrupt: **14 cycles**. Not used for the cycle cost calculations, but used for the simple "available cycles per frame" calculation and comparison.
 
-We measure multiple sets of these, to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations.
+We measure multiple sets of the tests to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations.
 
-    const float g_afFrmTotalCycles[] = {59736.0, 71364.0};  // NTSC, PAL
+The tests are run in both 50Hz and 60Hz (screen will blink during change). Colors will also change when we do testing towards the vdp palette port.
 
-    NUM_ITERATIONS = 128;                                   // default (which seem way over the top -  needed at all?)
-
-The tests are run in both 50Hz and 60Hz (screen will blink during change).
+One test is added at the end, to test the I/O command towards non-VDP ports for validation.
 
 ### Output examples ###
 

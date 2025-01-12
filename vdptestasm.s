@@ -1,3 +1,4 @@
+; ============================================================================
 ; vdptestasm.s - assembler companion part for voitt.c
 ; note: any symbol to be reached via C in SDCC is prefixed with an underscore
 ; any parameters are passed according to __sdcccall(1) found here:
@@ -6,18 +7,20 @@
 
     .allow_undocumented
     .area _CODE
-    
+
 ; ----------------------------------------------------------------------------
 ; CONSTANTS
     BIOS_CHPUT  .equ 0x00A2
     CALSLT      .equ 0x001C
     RDSLT       .equ 0x000C
     EXPTBL      .equ 0xFCC1
+
+    INIPLT      .equ 0x0141
+    RSTPLT      .equ 0x0145
     ; BDOS        .equ 0x0005             ; "Basic Disk Operating System"
     ; BDOS_STROUT .equ 9                  ;.string output
 
     CHGMOD      .equ 0x005F             ; BIOS routine used to initialize the screen
-    ; LINL40      .equ 0xF3AE             ; Screen width
 
     CHGCPU      .equ 0x0180             ; tame that turbo please
     GETCPU      .equ 0x0183
@@ -28,10 +31,13 @@
     VDP_REG9    .equ 0xFFE8             ; mirror
     FRQ_BITMASK .equ #0b00000010        ; to be used with VDP_REG9
 
+    NMI         .equ 0x0066             ; subrom stuff
+    EXTROM      .equ 0x015f             ; subrom stuff
+    H_NMI       .equ 0xfdd6             ; subrom stuff
+
 ; ----------------------------------------------------------------------------
 ; EXTERNAL REFERENCES
     .globl      _g_bStorePCReg
-    .globl      _g_bToggle
     .globl      _g_pPCReg
 
 ; ----------------------------------------------------------------------------
@@ -40,14 +46,12 @@
 
 ; ------------------
 ; Common start
+; Cost after halt: 33 (includes ret cost)
 ; ------------------
 commonStartForAllTests:
-
     halt                                ; ensure that the following commands are not interrupted (di/ei is not safe!)
 
-    xor     a
-    ld      (_g_bToggle), a             ; false
-    inc     a
+    ld      a, #01
     ld      (_g_bStorePCReg), a         ; true
 
     ret
@@ -58,50 +62,10 @@ commonStartForAllTests:
 commonTestRetSpot::
     ret
 
-; ------------------
-; OUTI (ADD_ENTRY)
-; ------------------
-_testRunOUTI::
+_TEST_START_BLOCK_BEGIN::                ; this will be copied into RAM(HEAP) where the test will be run
     call    commonStartForAllTests
-    ld      hl, #0x0000                 ; this one is just random
-    ld      c, #VDPIO  
-    halt
-
-_testRunOUTIBaseline::
-.rept (75000/18)                        ; repeats are, at max, a huge frame (PAL) split into the minimum cost of an instruction
-    outi
-.endm
-
-    ret
-
-; ------------------
-; OUT (ADD_ENTRY)
-; ------------------
-_testRunOUT::
-    call    commonStartForAllTests
-    ld      a, #0x00                    ; this one is just random
-    halt
-
-_testRunOUTBaseline::
-.rept (75000/12)                        ; repeats are, at max, a huge frame (PAL) split into the minimum cost of an instruction
-    out     (VDPIO), a                     ; this will break the speed limits, but our focus is something else
-.endm
-
-    ret
-
-; ------------------
-; IN (ADD_ENTRY)
-; ------------------
-_testRunIN::
-    call    commonStartForAllTests
-    halt
-
-_testRunINBaseline::
-.rept (75000/12)                        ; repeats are, at max, a huge frame (PAL) split into the minimum cost of an instruction
-    in      a, (VDPIO)                  ; this will break the speed limits, but our focus is something else
-.endm
-
-    ret
+    ; ... rest of the test code comes here ...
+_TEST_START_BLOCK_END::
 
 ; ----------------------------------------------------------------------------
 ; MODIFIES: AF
@@ -116,7 +80,6 @@ _getPALRefreshRate::
 ; ----------------------------------------------------------------------------
 ; IN:       A:  1 if PAL, 0 if NTSC
 ; MODIFIES: AF, B
-;
 ; void setPALRefreshRate(bool bPAL);
 _setPALRefreshRate::
 
@@ -142,7 +105,6 @@ _setPALRefreshRate::
 ; IN:       A:  Bits: 0W0000UU, W = Write, U means Upper VRAM address(bit 17-18)
 ;           DE: VRAM address, 16 lowest bits
 ; MODIFIES: AF, B, DE
-;
 ; setVRAMAddressNI(u8 uBitCodes, u16 nVRAMAddress);
 _setVRAMAddressNI::
 
@@ -173,18 +135,16 @@ _setVRAMAddressNI::
     ret
 
 ; ----------------------------------------------------------------------------
-; Resets VLANK IRQ, and when g_bStorePCReg and g_bToggle are true, we store
+; Resets VLANK IRQ, and when g_bStorePCReg is true, we store
 ; the PC reg and ALSO change the stack so that running program jumps to the end
 ; of the test (=ret). This latter part only to save time during tests.
 ; 
-; Cost: 215 (on first, when g_bStorePCReg==true and g_bToggle==0)
+; Cost: 171 (on first, when g_bStorePCReg==true)
 ; + CPU kicking this off should be: +13+1 (13 according to this:
 ; http://www.z80.info/interrup.htm) and then I assume there is at least one M1
-; wait cycle. Furthermore there is "JP _customISR" at 0x0028 (=18 cycles)
-; Totals: 247 cycles
-;
+; wait cycle. Furthermore there is "JP _customISR" at 0x0038 (=11 cycles)
+; Totals: 196 cycles
 ; MODIFIES: (No registers of course!)
-;
 _customISR::
     push	af
     push    bc
@@ -192,7 +152,7 @@ _customISR::
 
     xor 	a                       ; get status for sreg 0
     out		(VDPPORT1), a			; status register number
-    ld		a, #0x8F				; VDP register R#15 (and set 7th bit to signal reg)
+    ld		a, #0x8F				; VDP register R#15
     out		(VDPPORT1), a			; out VDP register number
     nop								; obey speed
     in		a, (VDPPORT1)			; read VDP S#n to reset VBLANK IRQ
@@ -200,11 +160,6 @@ _customISR::
     ld      a, (_g_bStorePCReg)     ; global switch on storing or not
     or      a
     jr      z, leave_isr
-
-    ld      a, (_g_bToggle)         ; should be 0 on first run, to avoid storing and force-jumping
-    xor     #1
-    ld      (_g_bToggle), a
-    jr      nz, leave_isr           ; if this is the first/forced interrupt, we bail
 
     ; -- BEGIN STORING PART --
 	ld		hl, #0
@@ -243,7 +198,6 @@ leave_isr:
 ; of no concern in this program)
 ; IN:       HL - pointer to zero-terminated string
 ; MODIFIES: ? (BIOS...)
-; 
 ; void print(u8* szMessage)
 _print::
 
@@ -277,7 +231,6 @@ leave_me:
 ; 3 = MSX turbo R
 ;
 ; MODIFIES: ? (BIOS...)
-;
 ; u8 getMSXType()
 _getMSXType::
     push    ix                  ; just in case, as SDCC is peculiar about this register
@@ -303,7 +256,6 @@ callSlot:
 ;                      1 0 = R800 DRAM mode
 ;
 ; MODIFIES: ? (BIOS...)
-;
 ; void change CPU();
 _changeCPU::
 
@@ -321,7 +273,6 @@ _changeCPU::
 ;                      1 0 = R800 DRAM mode
 ;
 ; MODIFIES: ? (BIOS...)
-;
 ; u8 getCPU();
 _getCPU::
 
@@ -333,11 +284,8 @@ _getCPU::
 
 ; ----------------------------------------------------------------------------
 ; Set screen.
-;
 ; IN:       A - mode, as in screen (https://www.msx.org/wiki/SCREEN)
-; 
 ; MODIFIES: ? (BIOS...)
-;
 ; u8 changeMode(u8 uModeNum)
 _changeMode::
 
@@ -347,3 +295,83 @@ _changeMode::
     pop     ix
     ret
 
+; ----------------------------------------------------------------------------
+; CALSUB - from: https://map.grauw.nl/sources/callbios.php
+;
+; In: IX = address of routine in MSX2 SUBROM
+;     AF, HL, DE, BC = parameters for the routine
+;
+; Out: AF, HL, DE, BC = depending on the routine
+;
+; Changes: IX, IY, AF', BC', DE', HL'
+;
+; Call MSX2 subrom from MSXDOS. Should work with all versions of MSXDOS.
+;
+; Notice: NMI hook will be changed. This should pose no problem as NMI is
+; not supported on the MSX at all.
+;
+CALSUB:
+    exx
+    ex      af, af'       ; store all registers
+    ld      hl, #EXTROM
+    push    hl
+    ld      hl, #0xC300
+    push    hl           ; push NOP ; JP EXTROM
+    push    ix
+    ld      hl, #0x21DD
+    push    hl           ; push LD IX,<entry>
+    ld      hl, #0x3333
+    push    hl           ; push INC SP; INC SP
+    ld      hl, #0
+    add     hl, sp        ; HL = offset of routine
+    ld      a, #0xC3
+    ld      (H_NMI), a
+    ld      (H_NMI + 1), hl ; JP <routine> in NMI hook
+    ex      af, af'
+    exx                 ; restore all registers
+    ld      ix, #NMI
+    ld      iy, (EXPTBL - 1)
+    call    CALSLT       ; call NMI-hook via NMI entry in ROMBIOS
+                        ; NMI-hook will call SUBROM
+    exx
+    ex      af, af'       ; store all returned registers
+    ld      hl, #10
+    add     hl, sp
+    ld      sp, hl        ; remove routine from stack
+    ex      af, af'
+    exx                 ; restore all returned registers
+    ret
+
+
+; ----------------------------------------------------------------------------
+; Init/Stores palette in VRAM
+; IN:       -
+; MODIFIES: ? (BIOS...)
+; void initPalette()
+_initPalette::
+
+    push    ix
+    ld      ix, #INIPLT
+    call    CALSUB
+    pop     ix
+    ret
+
+; ----------------------------------------------------------------------------
+; Restores palette from VRAM
+; IN:       -
+; MODIFIES: ? (BIOS...)
+; void restorePalette()
+_restorePalette::
+
+    push    ix
+    ld      ix, #RSTPLT
+    call    CALSUB
+    pop     ix
+    ret
+
+; ============================================================================
+; HEAP / RAM
+; 
+    .area _HEAP
+
+_runTestAsmInHeap:: ; test code to be copied in here, in the heap (after ram variables)
