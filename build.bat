@@ -7,6 +7,7 @@ sdasz80 -o -s -p -w objs\vdptestasm.rel vdptestasm.s
 sdcc --code-loc 0x010E --data-loc 0 -mz80 --no-std-crt0 --opt-code-speed objs\dos_crt.rel objs\vdptestasm.rel %NAME%.c -o objs\%NAME%.ihx
 
 @REM -s argument is n*16384, where default is n=2 (amend when you get 'error: size of the buffer is too small')
-makebin -s 49152 -p -o 0x100 objs\%NAME%.ihx dska\%NAME%.com
+@REM makebin -s 65535 -p -o 0x100 objs\%NAME%.ihx dska\%NAME%.com
+makebin -p -o 0x100 objs\%NAME%.ihx dska\%NAME%.com
 
 @REM python makesymbolfile.py objs %NAME%
