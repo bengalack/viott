@@ -35,7 +35,6 @@ One test is added at the end, to test the I/O command towards non-VDP ports for 
 * Wanted to use as many BIOS-calls as possible, to reduce code and stay as easy to read for others.
 * [SDCC](https://sdcc.sourceforge.net/) v4.2 or later, is needed though, to enable C.
 * Batch files are made for *Windows*, but should be easy to mod for other platforms. 
-* (Optional) uncomment a line and `python` generates `.sym`-files which *openmsx* understands.
 * If you use an emulator, edit `run.bat` to fit your paths/tools.
 
 ### Target platform / environment ###
