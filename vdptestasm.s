@@ -5,6 +5,7 @@
 ; https://sdcc.sourceforge.net/doc/sdccman.pdf
 ; author: pal.hansen@gmail.com
 
+    .module vdptestasm
     .allow_undocumented
     .area _CODE
 
@@ -48,7 +49,7 @@
 ; Common start
 ; Cost after halt: 33 (includes ret cost)
 ; ------------------
-commonStartForAllTests:
+commonStartForAllTests::
     halt                                ; ensure that the following commands are not interrupted (di/ei is not safe!)
 
     ld      a, #01
@@ -369,9 +370,11 @@ _restorePalette::
     pop     ix
     ret
 
+.ifndef ROM_OUTPUT_FILE
 ; ============================================================================
-; HEAP / RAM
+; HEAP / RAM (only valid in MSXDOS mode, _HEAP may not be usable in ROM mode)
 ; 
     .area _HEAP
 
-_runTestAsmInHeap:: ; test code to be copied in here, in the heap (after ram variables)
+_runTestAsmInMem:: ; test code to be copied in here, in the heap (after ram variables)
+.endif

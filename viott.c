@@ -80,23 +80,22 @@ enum freq_variant { NTSC, PAL, FREQ_COUNT };
 
 // Declarations (see .s-file) ------------------------------------------------
 //
-u8   getMSXType();
-u8   getCPU();
+u8   getMSXType(void);
+u8   getCPU(void);
 void changeCPU(u8 uMode);
 u8   changeMode(u8 uModeNum);
 
 void print(u8* szMessage);
-bool getPALRefreshRate();
+bool getPALRefreshRate(void);
 void setPALRefreshRate(bool bPAL);
-void customISR();
+void customISR(void);
 void setVRAMAddressNI(u8 uBitCodes, u16 nVRAMAddress);
-void initPalette();         // in case we mess up the palette during testing
-void restorePalette();
+void initPalette(void);             // in case we mess up the palette during testing
+void restorePalette(void);
 
-void runTestAsmInHeap();
-
-void TEST_START_BLOCK_BEGIN();  // used for getting address only!
-void TEST_START_BLOCK_END();    // used for getting address only!
+void runTestAsmInMem(void);
+void TEST_START_BLOCK_BEGIN(void);  // used for getting address only!
+void TEST_START_BLOCK_END(void);    // used for getting address only!
 
 // Consts / ROM friendly -----------------------------------------------------
 //
@@ -194,7 +193,7 @@ const TestDescriptor    g_aoTest[] = {
                                      };
 
 const u8                g_szErrorMSX[]      = "MSX2 and above is required";
-const u8                g_szGreeting[]      = "VDP I/O Timing Test [z80] v1.2 - Test: %d repeats\r\n";
+const u8                g_szGreeting[]      = "VDP I/O Timing Test [z80] v1.2 - Test: %d repeats [%s]\r\n";
 const u8                g_szWait[]          = "...please wait a minute...";
 const u8                g_szRemoveWait[]    = "\r                                \r\n";
 const u8                g_szReportCols[]    = "          Hz  avg      min   max   cost  ~d | Hz  avg      min   max   cost  ~d\r\n";
@@ -230,111 +229,88 @@ u16                     g_anFrameInstrResultMax[FREQ_COUNT][arraysize(g_aoTest)]
 size_t                  g_nTestStartBlockSize;
 u16*                    g_pCurTestBaseline; // Start of unrolleds
 
-// Code ----------------------------------------------------------------------
-// All bodies must be pure asm via __naked and without ret/return at the end.
+// --------------------------------------------------------------------------
+// Specials in case of ROM outfile
 //
-void TEST_EMPTY() __naked
-{
-__asm
-__endasm;
-}
+#ifdef ROM_OUTPUT_FILE
 
-void TEST_0_UNROLL() __naked
-{
-__asm
-    inc a
-__endasm;
-}
+extern void             establishSlotIDsNI_fromC(void);
+extern void             memAPI_enaSltPg0_NI_fromC(u8 uSlotID);
+extern void             memAPI_enaSltPg2_NI_fromC(u8 uSlotID);
 
-void TEST_1_STARTUP() __naked
-{
-__asm
-    ld hl, #0x0000              ; // this one is just random
-    ld c, #0x98                 ; // VDPIO
-__endasm;
-}
-void TEST_1_UNROLL() __naked
-{
-__asm
-    outi
-__endasm;
-}
+u8 __at(0x0038)         g_uInt38;           // In ROM mode there is NO JP at this address initially
 
-void TEST_2_UNROLL() __naked
-{
-__asm
-    out (0x98), a               ; // VDPIO. This will break the speed limits.
-__endasm;
-}
+u8 __at(0xF3AE)         g_uBIOS_LINL40;     // LINL40, MSX BIOS for width/columns
 
-void TEST_3_UNROLL() __naked
-{
-__asm
-    in a, (0x98)                ; // VDPIO. This will break the speed limits.
-__endasm;
-}
 
-void TEST_4_UNROLL() __naked
-{
-__asm
-    in a, (0x98)                 ; // VDPIO. This will break the speed limits.
-__endasm;
-}
+u8                      g_uSlotidPage0BIOS;
+u8                      g_uSlotidPage0RAM;
+u8                      g_uSlotidPage2RAM;
+u8                      g_uSlotidPage2ROM;
+u8                      g_uCurSlotidPage0;
 
-void TEST_5_STARTUP() __naked
-{
-__asm
-                                ; // NOTE: Somewhat unclear the cycle cost of this
-    ld a, #3                    ; // get status for sreg n (https://www.msx.org/wiki/VDP_Status_Registers)
-    out (0x99), a               ; // VDPPORT1. status register number
-    ld a, #0x8F                 ; // VDP register R#15 (write)
-    out (0x99), a               ; // VDPPORT1. out VDP register number
-__endasm;
-}
+#define SEG_P2_SW       0x7000	// Segment switch on page 8000h-BFFFh (ASCII 16k Mapper) https://www.msx.org/wiki/MegaROM_Mappers#ASC16_.28ASCII.29
+#define ENABLE_SEGMENT_PAGE2(data) (*((u8* volatile)(SEG_P2_SW)) = ((u8)(data)));
 
-void TEST_5_UNROLL() __naked
-{
-__asm
-    in a, (0x99)                ; // VDPPORT1. This will break the speed limits.
-__endasm;
-}
+const u8                g_szMedium[] = "ROM";
+#else
+const u8                g_szMedium[] = "DOS";
+#endif
 
-void TEST_6_UNROLL() __naked
-{
-__asm
-    out (0x9A), a               ; // VDPPALETTE. This will break the speed limits.
-__endasm;
-}
 
-void TEST_7_STARTUP() __naked   // Sets VDPSTREAM-port to constantly overwrite reg 32 (SX: X-coordinate to be transferred (LOW))
-{
-__asm
-                                ; // NOTE: Somewhat unclear the cycle cost of this due to two outs
-	ld    	a, #128 + 32		; // Set "Stream mode", but "non-autoincrement mode"
-	out   	(0x99), a
-	ld    	a, #128 + #17
-	out   	(0x99), a    	    ; // R#17 := 32
-__endasm;
+// Code ----------------------------------------------------------------------
+// Test code: All bodies must be pure asm via __naked and without ret/return
+// at the end. See the "tests_as_macros.inc"-file
+//
+void TEST_EMPTY(void) __naked {
+__asm .include "tests_as_macros.inc" __endasm;  // also used by the tests below
 }
-
-void TEST_7_UNROLL() __naked
-{
-__asm
-    out (0x9B), a               ; // VDPSTREAM. This will break the speed limits.
-__endasm;
+void TEST_0_UNROLL(void) __naked {
+__asm macroTEST_0_UNROLL __endasm;
 }
-
-void TEST_8_UNROLL() __naked
-{
-__asm
-    in a, (0x06)                ; // Assuming this one is not in use
-__endasm;
+void TEST_1_STARTUP(void) __naked {
+__asm macroTEST_1_STARTUP __endasm;
+}
+void TEST_1_UNROLL(void) __naked {
+__asm macroTEST_1_UNROLL __endasm;
+}
+void TEST_2_UNROLL(void) __naked {
+__asm macroTEST_2_UNROLL __endasm;
+}
+void TEST_3_UNROLL(void) __naked {
+__asm macroTEST_3_UNROLL __endasm;
+}
+void TEST_4_UNROLL(void) __naked {
+__asm macroTEST_4_UNROLL __endasm;
+}
+void TEST_5_STARTUP(void) __naked {
+__asm macroTEST_5_STARTUP __endasm;
+}
+void TEST_5_UNROLL(void) __naked {
+__asm macroTEST_5_UNROLL __endasm;
+}
+void TEST_6_UNROLL(void) __naked {
+__asm macroTEST_6_UNROLL __endasm;
+}
+void TEST_7_STARTUP(void) __naked {
+__asm macroTEST_7_STARTUP __endasm;
+}
+void TEST_7_UNROLL(void) __naked {
+__asm macroTEST_7_UNROLL __endasm;
+}
+void TEST_8_UNROLL(void) __naked {
+__asm macroTEST_8_UNROLL __endasm;
 }
 
 // ---------------------------------------------------------------------------
-void setCustomISR()
+void setCustomISR(void)
 {
     disableInterrupt();
+
+#ifdef ROM_OUTPUT_FILE
+    memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0RAM);
+#endif
+
     g_bStorePCReg   = false;        // control if storing & stack mods should take place. MUST be reset
     g_pInterruptOrg = g_pInterrupt;
     g_pInterrupt    = &customISR;
@@ -342,10 +318,15 @@ void setCustomISR()
 }
 
 // ---------------------------------------------------------------------------
-void restoreOriginalISR()
+void restoreOriginalISR(void)
 {
     disableInterrupt();
     g_pInterrupt = g_pInterruptOrg;
+
+#ifdef ROM_OUTPUT_FILE
+    memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0BIOS);
+#endif
+
     enableInterrupt();
 }
 
@@ -366,25 +347,35 @@ void prepareVDP(enum three_way eRead)
 
 // ---------------------------------------------------------------------------
 // The first part/block is identical for all tests
-void initTestInRamSetups()
+void initTestInMemorySetups(void)
 {
     g_nTestStartBlockSize =  (u8*)&TEST_START_BLOCK_END - (u8*)&TEST_START_BLOCK_BEGIN;
-    memcpy( &runTestAsmInHeap, &TEST_START_BLOCK_BEGIN, g_nTestStartBlockSize );
+
+#ifdef ROM_OUTPUT_FILE
+#else
+    memcpy( &runTestAsmInMem, &TEST_START_BLOCK_BEGIN, g_nTestStartBlockSize );
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// Put test at runTestAsmInHeap, just after the common start block with unrolled
+// Put test at runTestAsmInMem, just after the common start block with unrolled
 // instructions. First the startblock, and then x amount of unrolleds filling
 // a PAL frame (+ a buffer: we set 75000 cycles as max cycles in a frame)
-void setupTestInRam(u8 uTest)
+void setupTestInMemory(u8 uTest)
 {
-    u8* p = (u8*) &runTestAsmInHeap;
+    u8* p = (u8*) &runTestAsmInMem;
     p += g_nTestStartBlockSize;
-    
+
+#ifdef ROM_OUTPUT_FILE
+    p += g_aoTest[uTest].uStartupBlockSize;
+    g_pCurTestBaseline = p;
+
+    ENABLE_SEGMENT_PAGE2( uTest+1 );
+
+#else
     memcpy(p, *g_aoTest[uTest].pFncStartupBlock, g_aoTest[uTest].uStartupBlockSize);
 
     p += g_aoTest[uTest].uStartupBlockSize;
-
     g_pCurTestBaseline = p;
 
     // Below: The fastest instr (5 cycles, 1 byte) would max give 0x3A98 bytes
@@ -397,6 +388,7 @@ void setupTestInRam(u8 uTest)
     }
 
     *p = 0xC9; // add a "ret" at the end as security
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -404,7 +396,7 @@ void runIteration(enum freq_variant eFreq, u8 uTest, u8 uIterationNum)
 {
     prepareVDP( g_aoTest[ uTest ].eReadVRAM );
 
-    runTestAsmInHeap();
+    runTestAsmInMem();
 
     u16 nLength = (u16)g_pPCReg - (u16)g_pCurTestBaseline; 
     u16 nInstructions = nLength/g_aoTest[ uTest ].uUnrollInstructionSize;
@@ -413,7 +405,7 @@ void runIteration(enum freq_variant eFreq, u8 uTest, u8 uIterationNum)
 }
 
 // ---------------------------------------------------------------------------
-void runAllIterations()
+void runAllIterations(void)
 {
     u8 uType = getMSXType();
     u8 uCPUOrg = 0;
@@ -434,7 +426,7 @@ void runAllIterations()
 
         for(u8 t = 0; t < arraysize(g_aoTest); t++)
         {
-            setupTestInRam(t);
+            setupTestInMemory(t);
 
             for(u8 i = 0; i < NUM_ITERATIONS; i++)
                 runIteration(f, t, i);
@@ -449,7 +441,7 @@ void runAllIterations()
 }
 
 // ---------------------------------------------------------------------------
-void calcStatistics()
+void calcStatistics(void)
 {
     for(enum freq_variant f = 0; f < FREQ_COUNT; f++)
     {
@@ -500,7 +492,7 @@ void floatToIntWith2Decimals(float f, IntWith2Decimals* pObj)
 
 // ---------------------------------------------------------------------------
 //
-void printReport()
+void printReport(void)
 {
     print(g_szRemoveWait);
 
@@ -571,28 +563,55 @@ void printReport()
 }
 
 // ---------------------------------------------------------------------------
-u8 main()
+// If we are in ROM-mode, we put ROM in slot 2 as well
+void initRomIfAnyNI(void)
 {
+#ifdef ROM_OUTPUT_FILE
+
+    g_uBIOS_LINL40 = 80;    // LINL40, MSX BIOS for width/columns. Must be set before we change mode
+    changeMode(0);
+    disableInterrupt();
+
+    establishSlotIDsNI_fromC();
+
+    memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0RAM);
+    g_uInt38 = 0xC3; // code for JUMP
+    memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0BIOS);
+
+    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
+#endif
+}
+
+// ---------------------------------------------------------------------------
+#pragma disable_warning 126
+u8 main(void)
+{
+    initRomIfAnyNI();
+
     if(getMSXType() == 0)
     {
         print(g_szErrorMSX);
         return 1;
     }
     
-    sprintf(g_auBuffer, g_szGreeting, NUM_ITERATIONS);
+    sprintf(g_auBuffer, g_szGreeting, NUM_ITERATIONS, g_szMedium);
     print(g_auBuffer);
 
     print(g_szWait);
 
     initPalette();      // just in case we test/trash the palette
  
-    initTestInRamSetups();
+    initTestInMemorySetups();
     // changeMode(5);   // changing mode does not seem to matter at all, so we can just ignore for now
     runAllIterations();
     restorePalette();   // just in case the palette was messed up
     calcStatistics();
     // changeMode(0);
     printReport();
+
+#ifdef ROM_OUTPUT_FILE
+spin_forever: goto spin_forever;
+#endif
 
     return 0;
 }
