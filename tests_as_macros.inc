@@ -6,7 +6,7 @@
 .endm
 
 .macro macroTEST_1_STARTUP
-    ld hl, #0xC000              ; flip between RAM and ROM all the time
+    ld hl, #0xC000              ; flip between RAM and ROM all the time in ROM mode
     ld c, #0x98                 ; VDPIO
 .endm
 
@@ -56,7 +56,7 @@
 .endm
 
 .macro macroTEST_8_STARTUP
-    ld hl, #0xc000              ; this one is just random
+    ld hl, #0x8000              ; Reads RAM in dos, ROM in ROM
     ld c, #0x98                 ; VDPIO
 .endm
 

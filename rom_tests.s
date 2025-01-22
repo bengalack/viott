@@ -9,20 +9,21 @@
     .include "tests_as_macros.inc"
     .globl commonStartForAllTests
 
-; ----------------------------------------------------------------------------
-    .area _SEG0 ; sync
+; ; ----------------------------------------------------------------------------
+;     .area _SEG0 ; sync
 
-_runTestAsmInMem::  ; this address is reused in every segment in page 2
-    call    commonStartForAllTests
+; _runTestAsmInMem::  ; this address is reused in every segment in page 2
+;     call    commonStartForAllTests
 
-.rept 75000/5   ; divide by the cost of the unroll
-    macroTEST_0_UNROLL
-.endm
-    ret
+; .rept 75000/5   ; divide by the cost of the unroll
+;     macroTEST_0_UNROLL
+; .endm
+;     ret
 
 ; ----------------------------------------------------------------------------
     .area _SEG1 ; outdi98
 
+_runTestAsmInMem::  ; this address is reused in every segment in page 2
     call    commonStartForAllTests
 
     macroTEST_1_STARTUP

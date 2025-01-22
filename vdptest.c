@@ -74,6 +74,8 @@ typedef struct {
     enum three_way          eReadVRAM;                  // if we should set up VRAM for write, read or nothing
     u8                      uStartupCycleCost;          // init of regs or so, at start of frame, before repeats
     u8                      uRealSingleCost;            // the cost of the unroll instruction(s) if run once
+    bool                    bForceRAMRun;
+    u8                      uSegNum;                    // used only in ROM mode
 } TestDescriptor;
 
 typedef struct {
@@ -115,7 +117,9 @@ const TestDescriptor    g_aoTest[] = {
                                             1,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
-                                            5                   // u8               uRealSingleCost;
+                                            5,                  // u8               uRealSingleCost;
+                                            true,               // bool             bForceRAMRun; - first run is ALWAYS in RAM
+                                            0                   // u8               uSegNum;
                                         },
                                         {
                                             "outdi98",          // u8*              szTestName;
@@ -126,7 +130,9 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NO,                 // enum three_way   eReadVRAM;
                                             19,                 // u8               uStartupCycleCost;
-                                            18                  // u8               uRealSingleCost;
+                                            18,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            1                   // u8               uSegNum;
                                         },
                                         {
                                             "out98",            // u8*              szTestName;
@@ -137,7 +143,9 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NO,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
-                                            12                  // u8               uRealSingleCost;
+                                            12,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            2                   // u8               uSegNum;
                                         },
                                         {
                                             "in98",             // u8*              szTestName;
@@ -148,7 +156,9 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             YES,                // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
-                                            12                  // u8               uRealSingleCost;
+                                            12,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            3                   // u8               uSegNum;
                                         },
                                         {
                                             "in98x",            // u8*              szTestName;
@@ -159,7 +169,9 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NO,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
-                                            12                  // u8               uRealSingleCost;
+                                            12,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            4                   // u8               uSegNum;
                                         },
                                         {   // IN Regwrite test, WEAKNESS: two OUTs are used in the STARTUP, making the cost a tad inaccurate!
                                             "in99",             // u8*              szTestName;
@@ -170,7 +182,9 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             40+2,               // u8               uStartupCycleCost;
-                                            12                  // u8               uRealSingleCost;
+                                            12,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            5                   // u8               uSegNum;
                                         },
                                         {   // Palette test, must init first and restore palette after
                                             "out9A",            // u8*              szTestName;
@@ -181,7 +195,9 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
-                                            12                  // u8               uRealSingleCost;
+                                            12,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            6                   // u8               uSegNum;
                                         },
                                         {   // Stream port test. WEAKNESS: two OUTs are used in the STARTUP, making the cost a tad inaccurate!
                                             "out9B",            // u8*              szTestName;
@@ -192,10 +208,12 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             40+2,               // u8               uStartupCycleCost;
-                                            12                  // u8               uRealSingleCost;
+                                            12,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            7                   // u8               uSegNum;
                                         },
                                         {
-                                            "outi98",           // u8*              szTestName;
+                                            "outi98FMT",        // u8*              szTestName;
                                             TEST_8_STARTUP,     // function*        pFncStartupBlock;
                                             5,                  // u8               uStartupBlockSize;
                                             TEST_8_UNROLL,      // void             pFncUnrollInstruction;
@@ -203,7 +221,22 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NO,                 // enum three_way   eReadVRAM;
                                             19,                 // u8               uStartupCycleCost;
-                                            18                  // u8               uRealSingleCost;
+                                            18,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            8                   // u8               uSegNum;
+                                        },
+                                        {
+                                            "outi98RAM",        // u8*              szTestName;
+                                            TEST_8_STARTUP,     // function*        pFncStartupBlock;
+                                            5,                  // u8               uStartupBlockSize;
+                                            TEST_8_UNROLL,      // void             pFncUnrollInstruction;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
+                                            NO,                 // enum three_way   eReadVRAM;
+                                            19,                 // u8               uStartupCycleCost;
+                                            18,                 // u8               uRealSingleCost;
+                                            true,               // bool             bForceRAMRun;
+                                            8                   // u8               uSegNum;
                                         },
                                         {   // Just pick a non-used port (I hope), and check the speed
                                             "(ex) in06",        // u8*              szTestName;
@@ -214,12 +247,14 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
-                                            12                  // u8               uRealSingleCost;
+                                            12,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            9                   // u8               uSegNum;
                                         }
                                      };
 
 const u8                g_szErrorMSX[]      = "MSX2 and above is required";
-const u8                g_szGreeting[]      = "VDP I/O Timing Test [z80] v1.2 - Test: %d repeats [%s]\r\n";
+const u8                g_szGreeting[]      = "VDP I/O Timing Test [z80] v1.3 - Test: %d repeats [%s]\r\n";
 const u8                g_szWait[]          = "...please wait a minute...";
 const u8                g_szRemoveWait[]    = "\r                                \r\n";
 const u8                g_szReportCols[]    = "          Hz  avg      min   max   cost  ~d | Hz  avg      min   max   cost  ~d\r\n";
@@ -384,52 +419,36 @@ void initTestInMemorySetups(void)
 {
     g_nTestStartBlockSize =  (u8*)&TEST_START_BLOCK_END - (u8*)&TEST_START_BLOCK_BEGIN;
 
-#ifdef ROM_OUTPUT_FILE
-#else
     memcpy( &runTestAsmInMem, &TEST_START_BLOCK_BEGIN, g_nTestStartBlockSize );
-#endif
 }
 
 // ---------------------------------------------------------------------------
-// For DOS mode: Put test at runTestAsmInMem, just after the common start
+// For DOS mode: Copy test in at runTestAsmInMem, just after the common start
 // block with unrolled instructions. First the startblock, and then x amount
 // of unrolleds filling a PAL frame (+ a buffer: we set 75000 cycles as max
 // cycles in a frame)
-// For ROM mode: Set correct segment (tests already laid out) in page 2
-// (runTestAsmInMem is within the segment). If the test is the "baseline"-test
-// (the first test), we run this using RAM in page 2, as this seem to be
-// the fastest, most accurate and reliable way to measure the speed.
+// Some tests are forced to run in RAM (i.e. dos mode). Like the first run.
+// As this seem to be the fastest, most accurate and reliable way to measure
+// the speed.
 // Example: MSX Pico slows down if you have megaroms (on plain commands too,
 // not only outs), so we need to use RAM. (MSX pico code in page1 is also
 // slown down, so putting tests in RAM does not fix things 100%).
 //
-void setupTestInMemory(u8 uTest)
+void setupTestInMemoryDOS(u8 uTest, u8* p)
 {
-    u8* p = (u8*) &runTestAsmInMem;
-    p += g_nTestStartBlockSize;
-
-#ifdef ROM_OUTPUT_FILE
-    p += g_aoTest[uTest].uStartupBlockSize;
-    g_pCurTestBaseline = p;
-
-    if(uTest==0)
-    {
-        memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
-    }
-    else
-    {
-        memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
-        ENABLE_SEGMENT_PAGE2( TEST_SEG_OFFSET+uTest );
-    }
-#else
     memcpy(p, *g_aoTest[uTest].pFncStartupBlock, g_aoTest[uTest].uStartupBlockSize);
 
     p += g_aoTest[uTest].uStartupBlockSize;
     g_pCurTestBaseline = p;
 
     // Below: The fastest instr (5 cycles, 1 byte) would max give 0x3A98 bytes
-    // Medium instr (8 cycles, 2 bytes) gives 0x493E bytes - we should be fine
-    u16 nMax = 75000/g_aoTest[uTest].uRealSingleCost;
+    // Medium instr (8 cycles, 2 bytes) gives 0x493E bytes - we should be fine when using RAM
+    u8 n = g_aoTest[uTest].uUnrollInstructionsSize / g_aoTest[uTest].uUnrollSingleInstructionSize;
+    u16 nMax = (75000/g_aoTest[uTest].uRealSingleCost)/n;
+
+    if((nMax + g_aoTest[uTest].uStartupBlockSize + g_nTestStartBlockSize)>0x4000) // check when developing!
+        break();
+
     for(u16 n = 0; n < nMax; n++)
     {
         memcpy(p, *g_aoTest[uTest].pFncUnrollInstruction, g_aoTest[uTest].uUnrollInstructionsSize);
@@ -437,6 +456,43 @@ void setupTestInMemory(u8 uTest)
     }
 
     *p = 0xC9; // add a "ret" at the end as security
+}
+
+// ---------------------------------------------------------------------------
+// For ROM mode: Set correct segment (tests already laid out) in page 2
+// (runTestAsmInMem is within the segment). If the test is the "baseline"-test
+// (the first test), we run this using RAM in page 2, as 
+//
+#ifdef ROM_OUTPUT_FILE
+void setupTestInMemoryROM(u8 uTest, u8* p)
+{
+    if(g_aoTest[uTest].bForceRAMRun)
+    {
+        memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
+        setupTestInMemoryDOS(uTest, p);
+    }
+    else
+    {
+        p += g_aoTest[uTest].uStartupBlockSize;
+        g_pCurTestBaseline = p;
+
+        memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
+        ENABLE_SEGMENT_PAGE2(g_aoTest[uTest].uSegNum);
+    }
+}
+#endif
+
+// ---------------------------------------------------------------------------
+//
+void setupTestInMemory(u8 uTest)
+{
+    u8* p = (u8*) &runTestAsmInMem;
+    p += g_nTestStartBlockSize;
+
+#ifdef ROM_OUTPUT_FILE
+    setupTestInMemoryROM(uTest, p);
+#else
+    setupTestInMemoryDOS(uTest, p);
 #endif
 }
 
@@ -634,16 +690,16 @@ void initRomIfAnyNI(void)
 
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0RAM);
 
-    // Copy SEG0 content in page 2 to page 0 and then from page 0 to RAM in page 2
-    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
-    ENABLE_SEGMENT_PAGE2( TEST_SEG_OFFSET );
-    memcpy( (void*)0, (void*)0x8000, 0x4000 );
-    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
-    memcpy( (void*)0x8000, (void*)0, 0x4000 );
+    // // Copy SEG0 content in page 2 to page 0 and then from page 0 to RAM in page 2
+    // memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
+    // ENABLE_SEGMENT_PAGE2( TEST_SEG_OFFSET );
+    // memcpy( (void*)0, (void*)0x8000, 0x4000 );
+    // memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
+    // memcpy( (void*)0x8000, (void*)0, 0x4000 );
 
     g_uInt38 = 0xC3; // code for JUMP
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0BIOS);
-
+    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM); // need RAM here to copy in data
 #endif
 }
 
