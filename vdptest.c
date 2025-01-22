@@ -64,7 +64,8 @@ typedef struct {
 	function*               pFncStartupBlock;
 	u8                      uStartupBlockSize;
 	function*               pFncUnrollInstruction;       // or plural.
-	u8                      uUnrollInstructionSize;
+	u8                      uUnrollInstructionsSize;
+	u8                      uUnrollSingleInstructionSize;
     enum three_way          eReadVRAM;                  // if we should set up VRAM for write, read or nothing
     u8                      uStartupCycleCost;          // init of regs or so, at start of frame, before repeats
     u8                      uRealSingleCost;            // the cost of the unroll instruction(s) if run once
@@ -105,17 +106,19 @@ const TestDescriptor    g_aoTest[] = {
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             0,                  // u8               uStartupBlockSize;
                                             TEST_0_UNROLL,      // void             pFncUnrollInstruction;
-                                            1,                  // u8               uUnrollInstructionSize;
+                                            1,                  // u8               uUnrollInstructionsSize;
+                                            1,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
                                             5                   // u8               uRealSingleCost;
                                         },
                                         {
-                                            "outi98",           // u8*              szTestName;
+                                            "outdi98",          // u8*              szTestName;
                                             TEST_1_STARTUP,     // function*        pFncStartupBlock;
                                             5,                  // u8               uStartupBlockSize;
                                             TEST_1_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            4,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             NO,                 // enum three_way   eReadVRAM;
                                             19,                 // u8               uStartupCycleCost;
                                             18                  // u8               uRealSingleCost;
@@ -125,7 +128,8 @@ const TestDescriptor    g_aoTest[] = {
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             0,                  // u8               uStartupBlockSize;
                                             TEST_2_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             NO,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
                                             12                  // u8               uRealSingleCost;
@@ -135,7 +139,8 @@ const TestDescriptor    g_aoTest[] = {
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             0,                  // u8               uStartupBlockSize;
                                             TEST_3_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             YES,                // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
                                             12                  // u8               uRealSingleCost;
@@ -145,7 +150,8 @@ const TestDescriptor    g_aoTest[] = {
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             0,                  // u8               uStartupBlockSize;
                                             TEST_4_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             NO,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
                                             12                  // u8               uRealSingleCost;
@@ -155,7 +161,8 @@ const TestDescriptor    g_aoTest[] = {
                                             TEST_5_STARTUP,     // function*        pFncStartupBlock;
                                             8,                  // u8               uStartupBlockSize;
                                             TEST_5_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             40+2,               // u8               uStartupCycleCost;
                                             12                  // u8               uRealSingleCost;
@@ -165,7 +172,8 @@ const TestDescriptor    g_aoTest[] = {
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             0,                  // u8               uStartupBlockSize;
                                             TEST_6_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
                                             12                  // u8               uRealSingleCost;
@@ -175,17 +183,30 @@ const TestDescriptor    g_aoTest[] = {
                                             TEST_7_STARTUP,     // function*        pFncStartupBlock;
                                             8,                  // u8               uStartupBlockSize;
                                             TEST_7_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             40+2,               // u8               uStartupCycleCost;
                                             12                  // u8               uRealSingleCost;
+                                        },
+                                        {
+                                            "outi98",           // u8*              szTestName;
+                                            TEST_8_STARTUP,     // function*        pFncStartupBlock;
+                                            5,                  // u8               uStartupBlockSize;
+                                            TEST_8_UNROLL,      // void             pFncUnrollInstruction;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
+                                            NO,                 // enum three_way   eReadVRAM;
+                                            19,                 // u8               uStartupCycleCost;
+                                            18                  // u8               uRealSingleCost;
                                         },
                                         {   // Just pick a non-used port (I hope), and check the speed
                                             "(ex) in06",        // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             0,                  // u8               uStartupBlockSize;
-                                            TEST_8_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionSize;
+                                            TEST_9_UNROLL,      // void             pFncUnrollInstruction;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             0,                  // u8               uStartupCycleCost;
                                             12                  // u8               uRealSingleCost;
@@ -249,10 +270,11 @@ u8                      g_uSlotidPage2RAM;
 u8                      g_uSlotidPage2ROM;
 u8                      g_uCurSlotidPage0;
 
+#define TEST_SEG_OFFSET 1	    // Test segments starts here
 #define SEG_P2_SW       0x7000	// Segment switch on page 8000h-BFFFh (ASCII 16k Mapper) https://www.msx.org/wiki/MegaROM_Mappers#ASC16_.28ASCII.29
 #define ENABLE_SEGMENT_PAGE2(data) (*((u8* volatile)(SEG_P2_SW)) = ((u8)(data)));
 
-const u8                g_szMedium[] = "ROM";
+const u8                g_szMedium[] = "ROM (MEGAROM)";
 #else
 const u8                g_szMedium[] = "DOS";
 #endif
@@ -298,8 +320,14 @@ __asm macroTEST_7_STARTUP __endasm;
 void TEST_7_UNROLL(void) __naked {
 __asm macroTEST_7_UNROLL __endasm;
 }
+void TEST_8_STARTUP(void) __naked {
+__asm macroTEST_8_STARTUP __endasm;
+}
 void TEST_8_UNROLL(void) __naked {
 __asm macroTEST_8_UNROLL __endasm;
+}
+void TEST_9_UNROLL(void) __naked {
+__asm macroTEST_9_UNROLL __endasm;
 }
 
 // ---------------------------------------------------------------------------
@@ -358,9 +386,17 @@ void initTestInMemorySetups(void)
 }
 
 // ---------------------------------------------------------------------------
-// Put test at runTestAsmInMem, just after the common start block with unrolled
-// instructions. First the startblock, and then x amount of unrolleds filling
-// a PAL frame (+ a buffer: we set 75000 cycles as max cycles in a frame)
+// For DOS mode: Put test at runTestAsmInMem, just after the common start
+// block with unrolled instructions. First the startblock, and then x amount
+// of unrolleds filling a PAL frame (+ a buffer: we set 75000 cycles as max
+// cycles in a frame)
+// For ROM mode: Set correct segment (tests already laid out) in page 2
+// (runTestAsmInMem is within the segment). If the test is the timing-test
+// (the first test), we run this using RAM in page 2, as this seem to be
+// the fastest, most accurate and reliable way to measure the speed.
+// Example: MSX Pico slows down if you have megaroms (on plain commands too,
+// not only outs)
+//
 void setupTestInMemory(u8 uTest)
 {
     u8* p = (u8*) &runTestAsmInMem;
@@ -370,8 +406,15 @@ void setupTestInMemory(u8 uTest)
     p += g_aoTest[uTest].uStartupBlockSize;
     g_pCurTestBaseline = p;
 
-    ENABLE_SEGMENT_PAGE2( uTest+1 );
-
+    if(uTest==0)
+    {
+        memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
+    }
+    else
+    {
+        memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
+        ENABLE_SEGMENT_PAGE2( TEST_SEG_OFFSET+uTest );
+    }
 #else
     memcpy(p, *g_aoTest[uTest].pFncStartupBlock, g_aoTest[uTest].uStartupBlockSize);
 
@@ -383,8 +426,8 @@ void setupTestInMemory(u8 uTest)
     u16 nMax = 75000/g_aoTest[uTest].uRealSingleCost;
     for(u16 n = 0; n < nMax; n++)
     {
-        memcpy(p, *g_aoTest[uTest].pFncUnrollInstruction, g_aoTest[uTest].uUnrollInstructionSize);
-        p += g_aoTest[uTest].uUnrollInstructionSize;
+        memcpy(p, *g_aoTest[uTest].pFncUnrollInstruction, g_aoTest[uTest].uUnrollInstructionsSize);
+        p += g_aoTest[uTest].uUnrollInstructionsSize;
     }
 
     *p = 0xC9; // add a "ret" at the end as security
@@ -399,7 +442,7 @@ void runIteration(enum freq_variant eFreq, u8 uTest, u8 uIterationNum)
     runTestAsmInMem();
 
     u16 nLength = (u16)g_pPCReg - (u16)g_pCurTestBaseline; 
-    u16 nInstructions = nLength/g_aoTest[ uTest ].uUnrollInstructionSize;
+    u16 nInstructions = nLength/g_aoTest[ uTest ].uUnrollSingleInstructionSize;
 
     g_anFrameInstrResult[eFreq][uTest][uIterationNum] = nInstructions;
 }
@@ -423,11 +466,13 @@ void runAllIterations(void)
     for(enum freq_variant f = 0; f < FREQ_COUNT; f++)
     {
         setPALRefreshRate((bool)f);
+        halt(); // ensure a break just in case?
 
         for(u8 t = 0; t < arraysize(g_aoTest); t++)
         {
             setupTestInMemory(t);
 
+    // break();
             for(u8 i = 0; i < NUM_ITERATIONS; i++)
                 runIteration(f, t, i);
         }
@@ -445,8 +490,6 @@ void calcStatistics(void)
 {
     for(enum freq_variant f = 0; f < FREQ_COUNT; f++)
     {
-        setPALRefreshRate((bool)f);
-
         for(u8  t = 0; t < arraysize(g_aoTest); t++)
         {
             u32 lTotal = 0;
@@ -491,6 +534,16 @@ void floatToIntWith2Decimals(float f, IntWith2Decimals* pObj)
 }
 
 // ---------------------------------------------------------------------------
+// Special rounding.
+// Caters for the 3rd decimal already presented to user rounded up (using +0.005),
+// Just to avoid making it look like a bug.
+//
+s8 signedRoundX(float f)
+{
+    return f<0?(s8)(f-0.5):(s8)(f+0.505);
+}
+
+// ---------------------------------------------------------------------------
 //
 void printReport(void)
 {
@@ -522,6 +575,7 @@ void printReport(void)
     // Then the tests
     print(g_szReportCols);
     for(u8 t = 1; t < arraysize(g_aoTest); t++)
+    // for(u8 t = 1; t < 2; t++)
     {
         float fTestCost60Hz = (g_afFrmTotalCycles[NTSC] - g_aoTest[t].uStartupCycleCost) / g_afFrameInstrResultAvg[NTSC][t];
         float fTestCost50Hz = (g_afFrmTotalCycles[PAL] - g_aoTest[t].uStartupCycleCost) / g_afFrameInstrResultAvg[PAL][t];
@@ -533,8 +587,8 @@ void printReport(void)
         floatToIntWith2Decimals(fTestCost60Hz, &oTestCost60Hz);
         floatToIntWith2Decimals(fTestCost50Hz, &oTestCost50Hz);
 
-        s8 sDiff60Hz = (u8)(fTestCost60Hz + 0.5 ) - g_aoTest[t].uRealSingleCost;
-        s8 sDiff50Hz = (u8)(fTestCost50Hz + 0.5 ) - g_aoTest[t].uRealSingleCost;
+        s8 sDiff60Hz = signedRoundX(fTestCost60Hz - g_aoTest[t].uRealSingleCost);
+        s8 sDiff50Hz = signedRoundX(fTestCost50Hz - g_aoTest[t].uRealSingleCost);
 
         sprintf(g_auBuffer,
                 g_szReportValues,
@@ -563,22 +617,28 @@ void printReport(void)
 }
 
 // ---------------------------------------------------------------------------
-// If we are in ROM-mode, we put ROM in slot 2 as well
+//
 void initRomIfAnyNI(void)
 {
 #ifdef ROM_OUTPUT_FILE
 
     g_uBIOS_LINL40 = 80;    // LINL40, MSX BIOS for width/columns. Must be set before we change mode
     changeMode(0);
-    disableInterrupt();
+    disableInterrupt();     // DI was probably changed to EI in previous routine
 
     establishSlotIDsNI_fromC();
 
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0RAM);
+
+    // Copy SEG0 content in page 2 to page 0 and then from page 0 to RAM in page 2
+    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
+    ENABLE_SEGMENT_PAGE2( TEST_SEG_OFFSET );
+    memcpy( (void*)0, (void*)0x8000, 0x4000 );
+    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
+    memcpy( (void*)0x8000, (void*)0, 0x4000 );
+
     g_uInt38 = 0xC3; // code for JUMP
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0BIOS);
-
-    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
 #endif
 }
 

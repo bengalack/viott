@@ -369,12 +369,3 @@ _restorePalette::
     call    CALSUB
     pop     ix
     ret
-
-.ifndef ROM_OUTPUT_FILE
-; ============================================================================
-; HEAP / RAM (only valid in MSXDOS mode, _HEAP may not be usable in ROM mode)
-; 
-    .area _HEAP
-
-_runTestAsmInMem:: ; test code to be copied in here, in the heap (after ram variables)
-.endif

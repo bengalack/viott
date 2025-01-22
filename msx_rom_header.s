@@ -1,3 +1,5 @@
+; author: pal.hansen@gmail.com
+;
 	.globl	_main
 
 	.area _HEADER (ABS)

@@ -6,7 +6,8 @@
 	.globl	_main
 
 	.area _HEADER (ABS)
-	.org 0x0100
+	.area _CODE
+	; .org 0x0100
 
 msx_dos_entry_point::
 

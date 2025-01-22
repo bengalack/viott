@@ -22,15 +22,16 @@ _runTestAsmInMem::  ; this address is reused in every segment in page 2
     ret
 
 ; ----------------------------------------------------------------------------
-    .area _SEG1 ;   outi98
+    .area _SEG1 ; outdi98
 
     call    commonStartForAllTests
 
     macroTEST_1_STARTUP
-.rept 75000/18  ; divide by the cost of the unroll
+.rept 75000/(2*18) ; divide by the cost of the unroll
     macroTEST_1_UNROLL
 .endm
     ret
+
 ; ----------------------------------------------------------------------------
     .area _SEG2 ; out98
 
@@ -94,64 +95,22 @@ _runTestAsmInMem::  ; this address is reused in every segment in page 2
     ret
 
 ; ----------------------------------------------------------------------------
-    .area _SEG8 ; (ex) in06
+    .area _SEG8 ;   outi98
 
     call    commonStartForAllTests
 
-.rept 75000/12  ; divide by the cost of the unroll
+    macroTEST_8_STARTUP
+.rept 75000/18  ; divide by the cost of the unroll
     macroTEST_8_UNROLL
 .endm
     ret
 
+; ----------------------------------------------------------------------------
+    .area _SEG9 ; (ex) in06
 
+    call    commonStartForAllTests
 
-
-
-
-
-
-
-
-
-
-
-
-; ; ----------------------------------------------------------------------------
-;      .area _SEG0
-; _runTestAsmInMem::
-; .rept 0x4000
-;     NOP
-; .endm
-
-;     .area _SEG1
-; .rept 0x4000
-;     NOP
-; .endm
-;     .area _SEG2
-; .rept 0x4000
-;     NOP
-; .endm
-;     .area _SEG3
-; .rept 0x4000
-;     NOP
-; .endm
-;     .area _SEG4
-; .rept 0x4000
-;     NOP
-; .endm
-;     .area _SEG5
-; .rept 0x4000
-;     NOP
-; .endm
-;     .area _SEG6
-; .rept 0x4000
-;     NOP
-; .endm
-;     .area _SEG7
-; .rept 0x4000
-;     NOP
-; .endm
-;     .area _SEG8
-; .rept 0x4000
-;     NOP
-; .endm
+.rept 75000/12  ; divide by the cost of the unroll
+    macroTEST_9_UNROLL
+.endm
+    ret
