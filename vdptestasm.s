@@ -1,9 +1,9 @@
 ; ============================================================================
-; vdptestasm.s - assembler companion part for voitt.c
-; note: any symbol to be reached via C in SDCC is prefixed with an underscore
-; any parameters are passed according to __sdcccall(1) found here:
+; vdptestasm.s - assembler companion part for vdptest.c
+; Note: any symbol to be reached via C in SDCC is prefixed with an underscore
+; Parameters are passed according to __sdcccall(1) found here:
 ; https://sdcc.sourceforge.net/doc/sdccman.pdf
-; author: pal.hansen@gmail.com
+; VOITT © 2025 by Pål Frogner Hansen is licensed under CC BY 4.0
 
     .module vdptestasm
     .allow_undocumented
@@ -41,12 +41,8 @@
     .globl      _g_bStorePCReg
     .globl      _g_pPCReg
 
-; ----------------------------------------------------------------------------
-; Below are a few chunks of tests. A small kickoff chunk with a halt before
-; massive unrolled out/variants
-
 ; ------------------
-; Common start
+; Common start for tests (found other places)
 ; Cost after halt: 33 (includes ret cost)
 ; ------------------
 commonStartForAllTests::
@@ -63,7 +59,7 @@ commonStartForAllTests::
 commonTestRetSpot::
     ret
 
-_TEST_START_BLOCK_BEGIN::                ; this will be copied into RAM(HEAP) where the test will be run
+_TEST_START_BLOCK_BEGIN::                ; this will be copied into RAM(HEAP) or ROM (start of seg) where the test will be run
     call    commonStartForAllTests
     ; ... rest of the test code comes here ...
 _TEST_START_BLOCK_END::

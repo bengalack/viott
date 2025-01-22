@@ -1,20 +1,25 @@
 // ---------------------------------------------------------------------------
 // This program tries to figure out if I/O commands towards the VDP take
-// longer time than expected various systems/engines.
+// longer time than expected on various systems/engines.
+//
+// Ouput comes in two variants: 1. DOS 2: ROM (Megarom)
 // 
 // It is using a custom ISR which does not do much other than storing the
 // current address of the program pointer, at address: g_pPCReg
 //
-// Add a test by adding a TestDescriptor entry, with code in blocks for
-// TEST_n_STARTUP/EMPTY and TEST_n_UNROLL
+// In do mode, tests are added by a new TestDescriptor entry, with code in
+// macro-blocks ('tests_as_macros.inc'), which are used in TEST_n_STARTUP/EMPTY
+// and TEST_n_UNROLL for DOS version, and in segments in 'rom_tests.s' for
+// ROM-version. Buildscript must also include info about any added segment
 //
 // Assumptions:
-//  * We start in DOS, hence 0x0038 already contains 0xC3 (jp)
-//  * There are no line interrupts enabled
+//  * There are no line interrupts enabled when we start (DOS)
 //
 // Notes:
 //  * There is no support for global initialisation of RAM variables in this config
 //  * Likely some C programming shortcomings - I don't have much experience with C
+//  * Sorry about the various macros for tests and #ifdefs, but adding support for
+//    ROM in retrospect complicates things
 //  * SORRY! for the Hungarian notation, but is helps me when mixing asm and c
 //  * Others:
 //      Prefixes:
@@ -34,7 +39,7 @@
 //      Postfixes:
 //      * NI = No Interrupt
 //
-// author: pal.hansen@gmail.com
+// VOITT © 2025 by Pål Frogner Hansen is licensed under CC BY 4.0
 // ---------------------------------------------------------------------------
 
 #include <stdio.h>      // herein be sprintf 
@@ -391,11 +396,12 @@ void initTestInMemorySetups(void)
 // of unrolleds filling a PAL frame (+ a buffer: we set 75000 cycles as max
 // cycles in a frame)
 // For ROM mode: Set correct segment (tests already laid out) in page 2
-// (runTestAsmInMem is within the segment). If the test is the timing-test
+// (runTestAsmInMem is within the segment). If the test is the "baseline"-test
 // (the first test), we run this using RAM in page 2, as this seem to be
 // the fastest, most accurate and reliable way to measure the speed.
 // Example: MSX Pico slows down if you have megaroms (on plain commands too,
-// not only outs)
+// not only outs), so we need to use RAM. (MSX pico code in page1 is also
+// slown down, so putting tests in RAM does not fix things 100%).
 //
 void setupTestInMemory(u8 uTest)
 {
@@ -466,13 +472,12 @@ void runAllIterations(void)
     for(enum freq_variant f = 0; f < FREQ_COUNT; f++)
     {
         setPALRefreshRate((bool)f);
-        halt(); // ensure a break just in case?
+        halt();                 // halt here is needed on AX-370, otherwise we get skewed results
 
         for(u8 t = 0; t < arraysize(g_aoTest); t++)
         {
             setupTestInMemory(t);
 
-    // break();
             for(u8 i = 0; i < NUM_ITERATIONS; i++)
                 runIteration(f, t, i);
         }
@@ -575,7 +580,6 @@ void printReport(void)
     // Then the tests
     print(g_szReportCols);
     for(u8 t = 1; t < arraysize(g_aoTest); t++)
-    // for(u8 t = 1; t < 2; t++)
     {
         float fTestCost60Hz = (g_afFrmTotalCycles[NTSC] - g_aoTest[t].uStartupCycleCost) / g_afFrameInstrResultAvg[NTSC][t];
         float fTestCost50Hz = (g_afFrmTotalCycles[PAL] - g_aoTest[t].uStartupCycleCost) / g_afFrameInstrResultAvg[PAL][t];
@@ -639,6 +643,7 @@ void initRomIfAnyNI(void)
 
     g_uInt38 = 0xC3; // code for JUMP
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0BIOS);
+
 #endif
 }
 

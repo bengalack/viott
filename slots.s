@@ -1,11 +1,11 @@
 ; ---------------------------------------------------------------------------
-; These routines was initially made for ROM development with NO BIOS usage.
+; Search in slots and find all slot IDs for ROM and RAM.
+; These routines were initially made for ROM development with NO BIOS usage.
 ; It takes one shortcut: RAM slot for use in page two is copied from page 3.
 ; It is also expected that this code runs from page 1
 ; To get this to work, you need to provide the variables mentioned below
 ; externally.
 ; 
-; author: pal.hansen@gmail.com
 ; VOITT © 2025 by Pål Frogner Hansen is licensed under CC BY 4.0
 ; ---------------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ BIOS_SLTTBL  .equ 0xfcc5
 
 ;----------------------------------------------------------
 ; At startup. MSX2 - 64k https://www.msx.org/wiki/Develop_a_program_in_cartridge_ROM#Create_a_ROM_without_mapper
-; Memory looks like this:
+; Memory is epected to look like this:
 ; page 0: mainrom (FCC1)
 ; page 1: rom (cart) 
 ; page 2: ram 
@@ -46,13 +46,12 @@ BIOS_SLTTBL  .equ 0xfcc5
 ;
 _establishSlotIDsNI_fromC::
 
-	; in 		a, ( #0x2e )
-	in		a, ( #0xA8 )			; Current primary slots
+	in		a, (0xA8)	    		; Current primary slots
 	ld		b, a					; store in format P3P2P1P0
 
 	; ------------------ PAGE 0 - BIOS
-	ld  	a, ( #BIOS_EXPTBL+0 )
-	ld		( _g_uSlotidPage0BIOS ), a
+	ld  	a, (BIOS_EXPTBL+0)
+	ld		(_g_uSlotidPage0BIOS), a
 
 	; ; ------------------ PAGE 2 - RAM (CURRENT)
 	; ld		a, b					; current P3P2P1P0
@@ -66,7 +65,7 @@ _establishSlotIDsNI_fromC::
 	; ld		hl, #BIOS_EXPTBL
 	; add     l 
 	; ld		l, a
-	; ld  	a, ( hl )				; these have only bit 7 set if any, ie. if bit 7 not set: value is 0
+	; ld  	a, (hl) 				; these have only bit 7 set if any, ie. if bit 7 not set: value is 0
 	; or 		a
 	; jr  	z, page2ramslot_has_no_subslot
 
@@ -76,7 +75,7 @@ _establishSlotIDsNI_fromC::
 	; add		l
 	; ld		l, a					; is now pointing the #( BIOS_SLTTBL + slot )
 
-	; ld		a, ( hl )				; format S3S2S1S0
+	; ld		a, (hl) 				; format S3S2S1S0
 	; and		#0b00110000
 	; rrca
 	; rrca							; a now contains 0000SS00
@@ -92,7 +91,7 @@ _establishSlotIDsNI_fromC::
 	ld		hl, #BIOS_EXPTBL
 	add     l 
 	ld		l, a
-	ld  	a, ( hl )				; these have only bit 7 set if any, ie. if bit 7 not set: value is 0
+	ld  	a, (hl) 				; these have only bit 7 set if any, ie. if bit 7 not set: value is 0
 	or 		a
 	jr  	z, page2ramslot_has_no_subslot
 
@@ -102,7 +101,7 @@ _establishSlotIDsNI_fromC::
 	add		l
 	ld		l, a					; is now pointing the #( BIOS_SLTTBL + slot )
 
-	ld		a, ( hl )				; format P3P2P1P0
+	ld		a, (hl)	    			; format P3P2P1P0
 	and		#0b11000000
 	rrca
 	rrca
@@ -112,7 +111,7 @@ _establishSlotIDsNI_fromC::
 
 page2ramslot_has_no_subslot: 		; a is 0 at this point, IF jumped here
 	or		c
-	ld		( _g_uSlotidPage2RAM ), a
+	ld		(_g_uSlotidPage2RAM), a
 
 	; ------------------ PAGE 2 - ROM (COPY FROM CURRENT PAGE1)
 	ld		a, b					; current P3P2P1P0
@@ -124,7 +123,7 @@ page2ramslot_has_no_subslot: 		; a is 0 at this point, IF jumped here
 	ld		hl, #BIOS_EXPTBL
 	add     l 
 	ld		l, a
-	ld  	a, ( hl )				; these have only bit 7 set if any, ie. if bit 7 not set: value is 0
+	ld  	a, (hl)				    ; these have only bit 7 set if any, ie. if bit 7 not set: value is 0
 	or 		a
 	jr  	z, page2romslot_has_no_subslot
 
@@ -134,17 +133,17 @@ page2ramslot_has_no_subslot: 		; a is 0 at this point, IF jumped here
 	add		l						; just an opposite "l = l + a"
 	ld		l, a					; is now pointing the #( BIOS_SLTTBL + slot )
 
-	ld		a, ( hl )				; format P3P2P1P0			- we want to copy the same subslot as page one here as well.
+	ld		a, (hl) 				; format P3P2P1P0			- we want to copy the same subslot as page one here as well.
 	and		#0b00001100				; a now contains 0000SS00
 	or		#0b10000000				; expanded slot flag
 
 page2romslot_has_no_subslot: 		; a is 0 at this point, IF jumped here
 	or		c
-	ld		( _g_uSlotidPage2ROM ), a
+	ld		(_g_uSlotidPage2ROM), a
 
 	; ------------------ PAGE 0 - RAM (RAM IS DETECTED FROM A RAM SEARCH)
 	call 	searchRamSlotIDPage0
-	ld		( _g_uSlotidPage0RAM ), a
+	ld		(_g_uSlotidPage0RAM), a
 
 	ret
 
@@ -155,14 +154,14 @@ page2romslot_has_no_subslot: 		; a is 0 at this point, IF jumped here
 ; there should always be possible to find a slot in an
 ; MSX2 that has ram in page0
 ; It will be restored to main-ROM in page 0 (at end of run)
-;D
+;
 ; IN:		
 ; OUT: 		A - SlotID in std slot format E000SSPP
 ; MODIFIES: AF, BC, DE
 ;
 searchRamSlotIDPage0::
 
-	ld 		b, #255										; holds primary slot... counter
+	ld 		b, #255						; holds primary slot... counter
 
 outer_loop::
 	inc 	b
@@ -172,7 +171,7 @@ outer_loop::
 	add 	l
 	ld		l, a						; hl now holds the address of the BIOS_EXPTBL for the right primary slot
 
-	ld		d, ( hl )					; d now holds the expanded-bit
+	ld		d, (hl)					    ; d now holds the expanded-bit
 	ld 		c, #255						; holds secondary slot... counter
 
 inner_loop::
@@ -206,8 +205,8 @@ end_outer_loop::
 
 isFound::
 
-	ld		a, ( #BIOS_EXPTBL )
-	call 	enableSlotInPage0_NI	; restore BIOS
+	ld		a, (BIOS_EXPTBL)
+	call 	enableSlotInPage0_NI	    ; restore BIOS
 
 	ld		a, e						; return in a. E SHOULD have been set above
 
@@ -220,16 +219,16 @@ isFound::
 ; MODIFIES: AF
 isRamSlotIDPage0::
 	push	bc
-	ld 		a, ( #0x0037 ) 				; Pretty much a random address
+	ld 		a, (0x0037) 				; Pretty much a random address
 	ld 		c, a
 	inc 	a
 	ld		b, a
-	ld 		( #0x0037 ), a
-	ld 		a, ( #0x0037 )
+	ld 		(0x0037), a
+	ld 		a, (0x0037)
 	cp		b
 
 	ld		a, c
-	ld 		( #0x0037 ), a				; restore, in case the ram really was nvram... we don't want to mess up
+	ld 		(0x0037), a				    ; restore, in case the ram really was nvram... we don't want to mess up
 
 	pop 	bc
 
@@ -268,17 +267,17 @@ enableSlotInPage0_NI::
 	push	bc
 	push	de
 
-	ld		( _g_uCurSlotidPage0 ), a
+	ld		(_g_uCurSlotidPage0), a
 
 	ld		c, a
 
 	; ----------------------  Set primary first
 	and		#0b00000011     ; keep "PP"-value only
 	ld		b, a
-    in      a, ( #0xA8 )    ; read slot value. Format P3P2P1P0 ; http://map.grauw.nl/resources/msx_io_ports.php#ppi
+    in      a, (0xA8)       ; read slot value. Format P3P2P1P0 ; http://map.grauw.nl/resources/msx_io_ports.php#ppi
 	and		#0b11111100     ; reset old "P0"-value
 	or		b				; set new "P0" as PP
-	out 	( #0xA8 ), a	; Set in effect
+	out 	(0xA8), a	    ; Set in effect
 	ld      d, a 			; possible store for later
 
 	; ----------------------  Now set secondary, if any
@@ -301,9 +300,9 @@ enableSlotInPage0_NI::
 	ld  	a, d			; get current config
     and     #0b00111111     ; keep P0-P2
 	or      b
-	out 	( #0xA8 ), a	; Set in effect
+	out 	(0xA8), a	    ; Set in effect
 
-	ld		a, ( #0xFFFF )	
+	ld		a, (0xFFFF)	
 	cpl						; a holds current SS for the whole slot: S3S2S1S0
 	and		#0b11111100		; mask away current S0
 	ld		e, a			; store in e
@@ -313,10 +312,10 @@ enableSlotInPage0_NI::
 	rrca
 	rrca					; move to S0 pos
 	or		e
-	ld		( #0xFFFF ), a	; set S0 (S3S2S1S0) in effect
+	ld		(0xFFFF), a	    ; set S0 (S3S2S1S0) in effect
 
 	ld		a, d			; restore wanted primary slots
-	out 	( #0xA8 ), a	; Set in effect
+	out 	(0xA8), a	    ; Set in effect
 
 bail0::
 	pop		de
@@ -334,7 +333,7 @@ bail0::
 ; Size: 48 bytes
 enableSlotInPage2_NI::
 
-	; ld		( _g_uCurSlotidPage2 ), a
+	; ld		(_g_uCurSlotidPage2), a
 
 	ld		c, a
 
@@ -345,10 +344,10 @@ enableSlotInPage2_NI::
 	rlca
 	rlca					; Move to P2-pos
 	ld		b, a
-    in      a, ( #0xA8 )    ; read slot value. Format P3P2P1P0 ; http://map.grauw.nl/resources/msx_io_ports.php#ppi
+    in      a, (0xA8)       ; read slot value. Format P3P2P1P0 ; http://map.grauw.nl/resources/msx_io_ports.php#ppi
 	and		#0b11001111     ; reset old "P2"-value
 	or		b				; set new "P2" as PP
-	out 	( #0xA8 ), a	; Set in effect
+	out 	(0xA8), a	    ; Set in effect
 	ld      d, a 			; possible store for later
 
 	; ----------------------  Now set secondary, if any
@@ -371,9 +370,9 @@ enableSlotInPage2_NI::
 	ld  	a, d			; get current config
     and     #0b00111111     ; keep P0-P2
 	or      b
-	out 	( #0xA8 ), a	; Set in effect
+	out 	(0xA8), a	    ; Set in effect
 
-	ld		a, ( #0xFFFF )	
+	ld		a, (#0xFFFF)	
 	cpl						; a holds current SS for the whle slot: S3S2S1S0
 	and		#0b11001111		; mask away current S2
 	ld		e, a			; store in e
@@ -383,9 +382,9 @@ enableSlotInPage2_NI::
 	rlca
 	rlca					; move to S2 pos
 	or		e
-	ld		( #0xFFFF ), a	; set S2 (S3S2S1S0) in effect
+	ld		(#0xFFFF), a	; set S2 (S3S2S1S0) in effect
 
 	ld		a, d			; restore wanted primary slots
-	out 	( #0xA8 ), a	; Set in effect
+	out 	(0xA8), a	    ; Set in effect
 
 	ret

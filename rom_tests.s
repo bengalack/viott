@@ -3,7 +3,6 @@
 ;
 ;       const TestDescriptor g_aoTest[]
 ;
-; author: pal.hansen@gmail.com
 ; VOITT © 2025 by Pål Frogner Hansen is licensed under CC BY 4.0
 
 
