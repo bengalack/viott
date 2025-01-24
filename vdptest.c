@@ -50,6 +50,7 @@
 //
 // #define NUM_ITERATIONS      128 // (max 255) 128 is similar to VATT iterations
 #define NUM_ITERATIONS      16
+#define TEST_SEG_OFFSET     2	    // Test segments starts here. Only used in ROM code
 
 typedef signed char         s8;
 typedef unsigned char       u8;
@@ -119,7 +120,7 @@ const TestDescriptor    g_aoTest[] = {
                                             0,                  // u8               uStartupCycleCost;
                                             5,                  // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun; - first run is ALWAYS in RAM
-                                            0                   // u8               uSegNum;
+                                            0xFF                // u8               uSegNum;
                                         },
                                         {
                                             "outdi98",          // u8*              szTestName;
@@ -132,7 +133,7 @@ const TestDescriptor    g_aoTest[] = {
                                             19,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            1                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+0                   // u8               uSegNum;
                                         },
                                         {
                                             "out98",            // u8*              szTestName;
@@ -145,7 +146,7 @@ const TestDescriptor    g_aoTest[] = {
                                             0,                  // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            2                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+1   // u8               uSegNum;
                                         },
                                         {
                                             "in98",             // u8*              szTestName;
@@ -158,7 +159,7 @@ const TestDescriptor    g_aoTest[] = {
                                             0,                  // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            3                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+2   // u8               uSegNum;
                                         },
                                         {
                                             "in98x",            // u8*              szTestName;
@@ -171,7 +172,7 @@ const TestDescriptor    g_aoTest[] = {
                                             0,                  // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            4                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+3   // u8               uSegNum;
                                         },
                                         {   // IN Regwrite test, WEAKNESS: two OUTs are used in the STARTUP, making the cost a tad inaccurate!
                                             "in99",             // u8*              szTestName;
@@ -184,7 +185,7 @@ const TestDescriptor    g_aoTest[] = {
                                             40+2,               // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            5                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+4   // u8               uSegNum;
                                         },
                                         {   // Palette test, must init first and restore palette after
                                             "out9A",            // u8*              szTestName;
@@ -197,7 +198,7 @@ const TestDescriptor    g_aoTest[] = {
                                             0,                  // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            6                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+5   // u8               uSegNum;
                                         },
                                         {   // Stream port test. WEAKNESS: two OUTs are used in the STARTUP, making the cost a tad inaccurate!
                                             "out9B",            // u8*              szTestName;
@@ -210,7 +211,7 @@ const TestDescriptor    g_aoTest[] = {
                                             40+2,               // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            7                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+6   // u8               uSegNum;
                                         },
                                         {
                                             "outi98FMT",        // u8*              szTestName;
@@ -223,7 +224,7 @@ const TestDescriptor    g_aoTest[] = {
                                             19,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            8                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+7   // u8               uSegNum;
                                         },
                                         {
                                             "outi98RAM",        // u8*              szTestName;
@@ -236,7 +237,7 @@ const TestDescriptor    g_aoTest[] = {
                                             19,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun;
-                                            8                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+8   // u8               uSegNum;
                                         },
                                         {   // Just pick a non-used port (I hope), and check the speed
                                             "(ex) in06",        // u8*              szTestName;
@@ -249,7 +250,7 @@ const TestDescriptor    g_aoTest[] = {
                                             0,                  // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            9                   // u8               uSegNum;
+                                            TEST_SEG_OFFSET+9   // u8               uSegNum;
                                         }
                                      };
 
@@ -295,9 +296,13 @@ u16*                    g_pCurTestBaseline; // Start of unrolleds
 //
 #ifdef ROM_OUTPUT_FILE
 
-extern void             establishSlotIDsNI_fromC(void);
-extern void             memAPI_enaSltPg0_NI_fromC(u8 uSlotID);
-extern void             memAPI_enaSltPg2_NI_fromC(u8 uSlotID);
+void                    UPPERCODE_BEGIN(void); // used for getting address only!
+void                    UPPERCODE_END(void); // used for getting address only!
+
+
+void                    establishSlotIDsNI_fromC(void);
+void                    memAPI_enaSltPg0_NI_fromC(u8 uSlotID);
+void                    memAPI_enaSltPg2_NI_fromC(u8 uSlotID);
 
 u8 __at(0x0038)         g_uInt38;           // In ROM mode there is NO JP at this address initially
 
@@ -310,7 +315,7 @@ u8                      g_uSlotidPage2RAM;
 u8                      g_uSlotidPage2ROM;
 u8                      g_uCurSlotidPage0;
 
-#define TEST_SEG_OFFSET 1	    // Test segments starts here
+#define UPPER_SEG_ID    1
 #define SEG_P2_SW       0x7000	// Segment switch on page 8000h-BFFFh (ASCII 16k Mapper) https://www.msx.org/wiki/MegaROM_Mappers#ASC16_.28ASCII.29
 #define ENABLE_SEGMENT_PAGE2(data) (*((u8* volatile)(SEG_P2_SW)) = ((u8)(data)));
 
@@ -468,7 +473,9 @@ void setupTestInMemoryROM(u8 uTest, u8* p)
 {
     if(g_aoTest[uTest].bForceRAMRun)
     {
+        disableInterrupt();
         memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
+        enableInterrupt();
         setupTestInMemoryDOS(uTest, p);
     }
     else
@@ -476,7 +483,9 @@ void setupTestInMemoryROM(u8 uTest, u8* p)
         p += g_aoTest[uTest].uStartupBlockSize;
         g_pCurTestBaseline = p;
 
+        disableInterrupt();
         memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
+        enableInterrupt();
         ENABLE_SEGMENT_PAGE2(g_aoTest[uTest].uSegNum);
     }
 }
@@ -538,6 +547,7 @@ void runAllIterations(void)
                 runIteration(f, t, i);
         }
     }
+
 
     restoreOriginalISR();
     setPALRefreshRate(bPALOrg);
@@ -688,18 +698,16 @@ void initRomIfAnyNI(void)
 
     establishSlotIDsNI_fromC();
 
+    // Put Upper-segment (ISR++) in page 2 and copy contents to 0xC000
+    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
+    ENABLE_SEGMENT_PAGE2( UPPER_SEG_ID );
+    memcpy( (void*)0xC000, (void*)0x8000, (u8*)&UPPERCODE_END - (u8*)&UPPERCODE_BEGIN );
+    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM); // need RAM here to copy in data
+
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0RAM);
-
-    // // Copy SEG0 content in page 2 to page 0 and then from page 0 to RAM in page 2
-    // memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
-    // ENABLE_SEGMENT_PAGE2( TEST_SEG_OFFSET );
-    // memcpy( (void*)0, (void*)0x8000, 0x4000 );
-    // memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM);
-    // memcpy( (void*)0x8000, (void*)0, 0x4000 );
-
     g_uInt38 = 0xC3; // code for JUMP
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0BIOS);
-    memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM); // need RAM here to copy in data
+
 #endif
 }
 
