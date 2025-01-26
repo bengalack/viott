@@ -10,31 +10,34 @@
 ; EXTERNAL REFERENCES
     .globl      _g_bStorePCReg
     .globl      _g_pPCReg
+    .globl      _g_pFncCurStartupBlock
+    .globl      _runTestAsmInMem
 
 _UPPERCODE_BEGIN::
 
 ; ------------------
 ; Common start for tests (found other places)
-; Cost after halt: 33 (includes ret cost)
+; Cost after halt: 68 + 5 (73) + the cost of _g_pFncCurStartupBlock (which we will find in TestDescriptor.uStartupCycleCost)
 ; ------------------
-commonStartForAllTests::
+_commonStartForAllTests::
     halt                                ; ensure that the following commands are not interrupted (di/ei is not safe!)
 
     ld      a, #01
     ld      (_g_bStorePCReg), a         ; true
 
-    ret
+    ld      hl, (_g_pFncCurStartupBlock); 17
+    call    call_hl                     ; 18
+
+    jp      _runTestAsmInMem            ; 11
+
+call_hl::
+    jp      (hl)                        ; 5
 
 ; ------------------
 ; Common end
 ; ------------------
 commonTestRetSpot::
     ret
-
-_TEST_START_BLOCK_BEGIN::                ; this will be copied into RAM(HEAP) or ROM (start of seg) where the test will be run
-    call    commonStartForAllTests
-    ; ... rest of the test code comes here ...
-_TEST_START_BLOCK_END::
 
 ; ----------------------------------------------------------------------------
 ; Resets VLANK IRQ, and when g_bStorePCReg is true, we store
@@ -43,8 +46,8 @@ _TEST_START_BLOCK_END::
 ; 
 ; Cost: 171 (on first, when g_bStorePCReg==true)
 ; + CPU kicking this off should be: +13+1 (13 according to this:
-; http://www.z80.info/interrup.htm) and then I assume there is at least one M1
-; wait cycle. Furthermore there is "JP _customISR" at 0x0038 (=11 cycles)
+; http://www.z80.info/interrup.htm) and as MSX always has +1 cycle per M1, we
+; add 1 cycle. Furthermore there is "JP _customISR" at 0x0038 (=11 cycles)
 ; Totals: 196 cycles
 ; MODIFIES: (No registers of course!)
 _customISR::

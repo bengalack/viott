@@ -11,5 +11,4 @@ sdcc -c -mz80 --opt-code-speed vdptest.c -o %OBJ_PATH%vdptest.rel
 
 sdcc --code-loc 0x0100 --data-loc 0 -mz80 --no-std-crt0 --opt-code-speed %OBJ_PATH%crt.rel %OBJ_PATH%msx_dos_header.rel %OBJ_PATH%vdptestasm.rel %OBJ_PATH%vdptest_ramcode.rel %OBJ_PATH%vdptest.rel %OBJ_PATH%runhere.rel -o %OBJ_PATH%%ONAME%.ihx
 
-
 MSXhex %OBJ_PATH%%ONAME%.ihx -s 0x0100 -b 0x4000 -o dska\%ONAME%.com
