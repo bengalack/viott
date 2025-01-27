@@ -9,19 +9,8 @@
     inc a
 .endm
 
-.macro macroTEST_0b_UNROLL
-    cp (hl)
-.endm
-
-.macro macroTEST_1_STARTUP
-    ld hl, #0xC000              ; flip between RAM and ROM all the time in ROM mode
-    ld c, #0x98                 ; VDPIO
-    ret
-.endm
-
 .macro macroTEST_1_UNROLL
-    outd
-    outi
+    inc hl
 .endm
 
 .macro macroTEST_2_UNROLL
