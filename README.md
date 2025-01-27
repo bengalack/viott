@@ -26,8 +26,8 @@ __Panasonic A1-ST turboR:__
 __Panasonic FS-A1 MSX2:__
 <img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_3_fs-a1.JPEG" />
 
-### Briefly on the ![tests](https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/tests_as_macros.inc) ###
-
+### Briefly on the tests ###
+...as in [tests_as_macros.inc](tests_as_macros.inc)
 1. out98: unrolled `out (0x98), a`
 2. in98: set vdp up for reading an address + unrolled `in a, (0x98)`
 3. in98x: (wrongly) set vdp up for writing to an address + unrolled `in a, (0x98)`
