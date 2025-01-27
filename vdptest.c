@@ -80,6 +80,14 @@ typedef const void          (function)(void);
 
 enum three_way { NO, YES, NA };
 enum freq_variant { NTSC, PAL, FREQ_COUNT };
+enum calc_bitmask { CC_NONE        = 0,
+                    CC_VDP_DIFF    = 0b1,
+                    CC_ROM_DIFF_A  = 0b10,
+                    CC_ROM_DIFF_B  = 0b100,             // ROM I/O
+                    CC_ROM2_DIFF_A = 0b1000,
+                    CC_ROM2_DIFF_B = 0b10000,           // ROM fundamental
+                    CC_ROM3_DIFF_A = 0b100000,
+                    CC_ROM3_DIFF_B = 0b1000000 };       // ROM references (like "ld a,(hl)")
 
 typedef struct {
     u8*                     szTestName;                 // max 9 characters
@@ -92,11 +100,7 @@ typedef struct {
     u8                      uStartupCycleCost;          // init of regs or so, at start of frame, before repeats
     u8                      uRealSingleCost;            // the cost of the unroll instruction(s) if run once
     bool                    bForceRAMRun;
-    bool                    bVDPDiffProof;
-    bool                    bROMDiffProofA;
-    bool                    bROMDiffProofB;
-    bool                    bROM2DiffProofA;
-    bool                    bROM2DiffProofB;
+    enum calc_bitmask       eCalcCandidate;
     u8                      uSegNum;                    // used only in ROM mode. 0xFF: not in use
 } TestDescriptor;
 
@@ -139,11 +143,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             5,                  // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun; - first run is ALWAYS in RAM
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             0xFF                // u8               uSegNum;
                                         },
                                         {
@@ -157,11 +157,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             7,                  // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun; - second run is ALWAYS in RAM
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             0xFF                // u8               uSegNum;
                                         },
                                         {
@@ -175,11 +171,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            true,               // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+0   // u8               uSegNum;
                                         },
                                         {
@@ -193,11 +185,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+1   // u8               uSegNum;
                                         },
                                         {
@@ -211,11 +199,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+2   // u8               uSegNum;
                                         },
                                         {
@@ -229,11 +213,7 @@ const TestDescriptor    g_aoTest[] = {
                                             51,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+3   // u8               uSegNum;
                                         },
                                         {   // Palette test, must init first and restore palette after
@@ -247,11 +227,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+4   // u8               uSegNum;
                                         },
                                         {   // Stream port test
@@ -265,11 +241,7 @@ const TestDescriptor    g_aoTest[] = {
                                             51,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+5   // u8               uSegNum;
                                         },
                                         {
@@ -283,11 +255,7 @@ const TestDescriptor    g_aoTest[] = {
                                             30,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            true,               // bool             bROM2DiffProofB;
+                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+6   // u8               uSegNum;
                                         },
                                         {   // Using same tests as above
@@ -301,11 +269,7 @@ const TestDescriptor    g_aoTest[] = {
                                             30,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun;
-                                            true,               // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_VDP_DIFF,        // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+6   // u8               uSegNum;
                                         },
                                         {   // Just pick a non-used port (I hope), and check the speed
@@ -319,11 +283,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            false,              // bool             bROMDiffProofA;
-                                            true,               // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
+                                            CC_ROM_DIFF_B,      // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+7   // u8               uSegNum;
                                         },
                                         {   // Just pick a non-used port (I hope), and check the speed
@@ -337,28 +297,80 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun;
-                                            false,              // bool             bVDPDiffProof;
-                                            true,               // bool             bROMDiffProofA;
-                                            false,              // bool             bROMDiffProofB;
-                                            false,              // bool             bROM2DiffProofA;
-                                            false,              // bool             bROM2DiffProofB;
-                                            TEST_SEG_OFFSET+7   // u8               uSegNum;
+                                            CC_ROM_DIFF_A,      // enum calc_bitmask eCalcCandidate;
+                                            0xFF                // u8               uSegNum;
+                                        },
+                                        {   
+                                            "!incaFMT",         // u8*              szTestName;
+                                            TEST_EMPTY,         // function*        pFncStartupBlock;
+                                            0,                  // u8               uStartupBlockSize;
+                                            TEST_A_UNROLL,      // void             pFncUnrollInstruction;
+                                            1,                  // u8               uUnrollInstructionsSize;
+                                            1,                  // u8               uUnrollSingleInstructionSize;
+                                            NA,                 // enum three_way   eReadVRAM;
+                                            11,                 // u8               uStartupCycleCost;
+                                            5,                  // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            CC_ROM2_DIFF_B,     // enum calc_bitmask eCalcCandidate;
+                                            TEST_SEG_OFFSET+8   // u8               uSegNum;
+                                        },
+                                        {   
+                                            "!incaRAM",         // u8*              szTestName;
+                                            TEST_EMPTY,         // function*        pFncStartupBlock;
+                                            0,                  // u8               uStartupBlockSize;
+                                            TEST_A_UNROLL,      // void             pFncUnrollInstruction;
+                                            1,                  // u8               uUnrollInstructionsSize;
+                                            1,                  // u8               uUnrollSingleInstructionSize;
+                                            NA,                 // enum three_way   eReadVRAM;
+                                            11,                 // u8               uStartupCycleCost;
+                                            5,                  // u8               uRealSingleCost;
+                                            true,               // bool             bForceRAMRun;
+                                            CC_ROM2_DIFF_A,     // enum calc_bitmask eCalcCandidate;
+                                            0xFF                // u8               uSegNum;
+                                        },
+                                        {   
+                                            "!cpiFMT",          // u8*              szTestName;
+                                            TEST_B_STARTUP,     // function*        pFncStartupBlock;
+                                            4,                  // u8               uStartupBlockSize;
+                                            TEST_B_UNROLL,      // void             pFncUnrollInstruction;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
+                                            NA,                 // enum three_way   eReadVRAM;
+                                            22,                 // u8               uStartupCycleCost;
+                                            18,                 // u8               uRealSingleCost;
+                                            false,              // bool             bForceRAMRun;
+                                            CC_ROM3_DIFF_B,     // enum calc_bitmask eCalcCandidate;
+                                            TEST_SEG_OFFSET+9   // u8               uSegNum;
+                                        },
+                                        {   
+                                            "!cpiRAM",          // u8*              szTestName;
+                                            TEST_B_STARTUP,     // function*        pFncStartupBlock;
+                                            4,                  // u8               uStartupBlockSize;
+                                            TEST_B_UNROLL,      // void             pFncUnrollInstruction;
+                                            2,                  // u8               uUnrollInstructionsSize;
+                                            2,                  // u8               uUnrollSingleInstructionSize;
+                                            NA,                 // enum three_way   eReadVRAM;
+                                            22,                 // u8               uStartupCycleCost;
+                                            18,                 // u8               uRealSingleCost;
+                                            true,               // bool             bForceRAMRun;
+                                            CC_ROM3_DIFF_A,     // enum calc_bitmask eCalcCandidate;
+                                            0xFF                // u8               uSegNum;
                                         }
                                      };
 
 const u8                g_szErrorMSX[]      = "MSX2 and above is required";
-const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.3. Test: %d repeats, %s, z80 3.5MHz supported\r\n"; 
+const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.31 Test: %d repeats, %s, z80 3.5MHz supported\r\n"; 
 const u8                g_szWait[]          = "...please wait 30 seconds or so...";
 const u8                g_szRemoveWait[]    = "\r                                  \r\n";
 const u8                g_szReportCols[]    = "          Hz  avg      min   max   cost  ~d | Hz  avg      min   max   cost  ~d\r\n";
-const u8                g_szReportValues[]  = "%9s %2s %5hu.%02d % 5hu % 5hu %2d.%02d %s%+d | %2s % 5hu.%02d % 5hu % 5hu %2d.%02d %s%+d\r\n";
+const u8                g_szReportValues[]  = "%9s %2s %5hu.%02d %5hu %5hu %2d.%02d %s%+d | %2s %5hu.%02d %5hu %5hu %2d.%02d %s%+d\r\n";
 
 const u8                g_szSpeedHdrCols[]  = "          Hz computer  norm  delta (~d)     | Hz computer  norm  delta (~d)\r\n";
-const u8                g_szSpeedResult[]   = "Frmcycles %s % 8ld % 5ld %s%+ 9d     | %s % 8ld % 5ld %s%+ 9d\r\n";
+const u8                g_szSpeedResult[]   = "Frmcycles %s % 8ld %5ld %s%+ 10d     | %s % 8ld %5ld %s%+ 10d\r\n";
 
-const u8                g_szSummary[]       = "SUMMARY - Frmcycles: %s, VDP I/O extra cycle(s): %+d\r\n";
-const u8                g_szSummaryROM[]    = "        - ROM fundamental extra cycles: %+d, ROM additional on read '(hl)': %+d";
-const u8                g_szSummaryROM2[]   = "        - (ROM not tested)";
+const u8                g_szSummary[]       = "[SUMMARY]  Cycles:%s  VDP I/O:%+d%s\r\n";
+const u8                g_szSummaryROM[]    = "  ROM:%+d  ROM I/O:%+d  ROM REF:%+d";
+const u8                g_szSummaryROM2[]   = "  (ROM not tested)";
 
 const u8                g_szNewline[]       = "\r\n";
 
@@ -389,6 +401,7 @@ float                   g_afFinalTestCost      [FREQ_COUNT][arraysize(g_aoTest)]
 s8                      g_sVDPDiff;
 s8                      g_sROMDiff;
 s8                      g_sROM2Diff;
+s8                      g_sROM3Diff;
 
 // --------------------------------------------------------------------------
 // Specials in case of ROM outfile
@@ -470,6 +483,15 @@ __asm macroTEST_8_UNROLL __endasm;
 }
 void TEST_9_UNROLL(void) __naked {
 __asm macroTEST_9_UNROLL __endasm;
+}
+void TEST_A_UNROLL(void) __naked {
+__asm macroTEST_A_UNROLL __endasm;
+}
+void TEST_B_STARTUP(void) __naked {
+__asm macroTEST_B_STARTUP __endasm;
+}
+void TEST_B_UNROLL(void) __naked {
+__asm macroTEST_B_UNROLL __endasm;
 }
 
 // ---------------------------------------------------------------------------
@@ -658,6 +680,31 @@ void runAllIterations(void)
 }
 
 // ---------------------------------------------------------------------------
+s8 getTestCostDiff(enum calc_candidate eBitMask)
+{
+    // find the fundamental ROM diff
+    u8 uNumTests = 0;
+    float fTestDiffsTotal = 0;
+
+    for(u8 f = 0; f < FREQ_COUNT; f++)
+    {
+        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
+        {
+            if((g_aoTest[t].eCalcCandidate & eBitMask) != 0)
+            {
+                uNumTests++;
+                fTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
+            }
+        }
+    }
+
+    if(uNumTests == 0) // we MUST have at least one of these
+        break();
+
+    return signedRoundX(fTestDiffsTotal / uNumTests);
+}
+
+// ---------------------------------------------------------------------------
 void calcStatistics(void)
 {
     for(u8 f = 0; f < FREQ_COUNT; f++)
@@ -696,107 +743,19 @@ void calcStatistics(void)
         for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
             g_afFinalTestCost[f][t] = (g_afFrmTotalCycles[f] - (g_aoTest[t].uStartupCycleCost - g_aoTest[0].uStartupCycleCost)) / g_afFrameInstrResultAvg[f][t];
 
-    // find the fundamental ROM diff
-    u8 uNumROMTests;
-    float fROMTestDiffsTotal;
+    s8 sROMDiffA = getTestCostDiff( CC_ROM_DIFF_A );
+    s8 sROMDiffB = getTestCostDiff( CC_ROM_DIFF_B );
+    g_sROMDiff = sROMDiffB - sROMDiffA; // ROM I/O
 
-    uNumROMTests = 0;
-    fROMTestDiffsTotal = 0;
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-    {
-        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
-        {
-            if(g_aoTest[t].bROMDiffProofA)
-            {
-                uNumROMTests++;
-                fROMTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
-            }
-        }
-    }
+    s8 sROM2DiffA = getTestCostDiff( CC_ROM2_DIFF_A );
+    s8 sROM2DiffB = getTestCostDiff( CC_ROM2_DIFF_B );
+    g_sROM2Diff = sROM2DiffB - sROM2DiffA; // ROM fundament
 
-    if(uNumROMTests == 0) // we MUST have at least one of these
-        break();
+    s8 sROM3DiffA = getTestCostDiff( CC_ROM3_DIFF_A );
+    s8 sROM3DiffB = getTestCostDiff( CC_ROM3_DIFF_B );
+    g_sROM3Diff = sROM3DiffB - sROM3DiffA; // ROM REFs
 
-    s8 sROMDiffA = signedRoundX(fROMTestDiffsTotal / uNumROMTests);
-
-    uNumROMTests = 0;
-    fROMTestDiffsTotal = 0;
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-    {
-        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
-        {
-            if(g_aoTest[t].bROMDiffProofB)
-            {
-                uNumROMTests++;
-                fROMTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
-            }
-        }
-    }
-
-    if(uNumROMTests == 0) // we MUST have at least one of these
-        break();
-
-    s8 sROMDiffB = signedRoundX(fROMTestDiffsTotal / uNumROMTests);
-    g_sROMDiff = sROMDiffB - sROMDiffA;
-
-    uNumROMTests = 0;
-    fROMTestDiffsTotal = 0;
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-    {
-        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
-        {
-            if(g_aoTest[t].bROM2DiffProofA)
-            {
-                uNumROMTests++;
-                fROMTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
-            }
-        }
-    }
-
-    if(uNumROMTests == 0) // we MUST have at least one of these
-        break();
-
-    s8 sROM2DiffA = signedRoundX(fROMTestDiffsTotal / uNumROMTests);
-
-    uNumROMTests = 0;
-    fROMTestDiffsTotal = 0;
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-    {
-        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
-        {
-            if(g_aoTest[t].bROM2DiffProofB)
-            {
-                uNumROMTests++;
-                fROMTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
-            }
-        }
-    }
-
-    if(uNumROMTests == 0) // we MUST have at least one of these
-        break();
-
-    s8 sROM2DiffB = signedRoundX(fROMTestDiffsTotal / uNumROMTests);
-    g_sROM2Diff = sROM2DiffB - sROM2DiffA;
-
-    // find the overall VDP diff
-    u8 uNumVDPTests = 0;
-    float fVDPTestDiffsTotal = 0;
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-    {
-        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
-        {
-            if(g_aoTest[t].bVDPDiffProof)
-            {
-                uNumVDPTests++;
-                fVDPTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
-            }
-        }
-    }
-
-    if(uNumVDPTests == 0) // we MUST have at least one of these
-        break();
-
-    g_sVDPDiff = signedRoundX(fVDPTestDiffsTotal / uNumVDPTests);
+    g_sVDPDiff = getTestCostDiff( CC_VDP_DIFF );
 }
 
 // ---------------------------------------------------------------------------
@@ -896,15 +855,18 @@ void printReport(void)
     else
         szOkOrNot = (u8*)"OK";
 
-    sprintf(g_auBuffer, g_szSummary, szOkOrNot, g_sVDPDiff);
-    print(g_auBuffer);
+    u8* szRom;
 
 #ifdef ROM_OUTPUT_FILE
-    sprintf(g_auBuffer, g_szSummaryROM, g_sROMDiff, g_sROM2Diff);
-    print(g_auBuffer);
+    u8 szBuf[50];
+    sprintf(szBuf, g_szSummaryROM, g_sROM2Diff, g_sROMDiff, g_sROM3Diff);
+    szRom = (u8*)szBuf;
 #else
-    print(g_szSummaryROM2);
+    szRom = g_szSummaryROM2;
 #endif
+
+    sprintf(g_auBuffer, g_szSummary, szOkOrNot, g_sVDPDiff, szRom);
+    print(g_auBuffer);
 }
 
 // ---------------------------------------------------------------------------

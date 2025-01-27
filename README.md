@@ -19,23 +19,33 @@ The tests are run in both 50Hz and 60Hz (screen will blink during change). Color
 
 ### Output examples ###
 __Panasonic A1-ST turboR:__
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_3_a1-st.JPEG" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_31_a1-st.JPEG" />
 
 __Panasonic FS-A1 MSX2:__
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_3_fs-a1.JPEG" />
+<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_31_fs-a1.JPEG" />
 
 ### Briefly on the tests ###
 ...as in [tests_as_macros.inc](tests_as_macros.inc)
+
 1. out98: unrolled `out (0x98), a`
 2. in98: set vdp up for reading an address + unrolled `in a, (0x98)`
 3. in98x: (wrongly) set vdp up for writing to an address + unrolled `in a, (0x98)`
 4. in99: set vdp regs up for reading + unrolled `in a, (0x99)`
-5. out9A: massive palette color changes by unrolled `in a, (0x9A)`
-6. out9B: set vdp in stream mode to constantly update reg #32, then unrolled `in a, (0x9B)`
-7. outi98FMT: FMT means current DOS or ROM in test page, set HL to test page(2) and C to 0x98, then unrolled `outi`
-8. outi98RAM: Enforce RAM in page where tests run from, set HL to this page and C to 0x98, then unrolled `outi`
-9. !in06FMT: ! means no VDP. FMT means current DOS or ROM in test page. Run unrolled `in a, (0x06)` from that page. 0x06 is a random port
-10. !in06RAM As previous, just that the test is forced to run from internal RAM.
+5. out9A: massive palette color changes by unrolled `out (0x9A), a`
+6. out9B: set vdp in stream mode to constantly update reg #32, then unrolled `out (0x9B), a`
+7. outi98FMT: set HL to ROM or RAM according to media and C to 0x98, then unrolled `outi`
+8. outi98RAM: set HL to RAM and C to 0x98, then unrolled `outi` forced to run from internal RAM
+9. !in06FMT: run unrolled `in a, (0x06)`. 0x06 is a random port seemingly not in use
+10. !in06RAM: run unrolled `in a, (0x06)`, forced to run from internal RAM
+11. !incaFMT: run unrolled `inc a` (this test is to check the basic performance)
+12. !incaRAM: run unrolled `inc a`, forced to run from internal RAM
+13. !cpiFMT: run unrolled `cpi` (this test test the use of registers referencing values pointed to in memory)
+14. !cpiRAM: run unrolled `cpi`, forced to run from internal RAM
+
+__Naming of the tests:__
+* 'FMT' means format (or media), so the test follows the format. DOS: RAM. ROM: ROM.
+* 'RAM' means that the test is forced to run in RAM even if the program comes on a cartridge.
+* The ! means that the test is not a VDP test, for comparisons (and ROM performance testing)
 
 ### Background ###
 * It all stems from the waitcycles reported on MSX-Engine T9769A/B/C: https://www.msx.org/wiki/Toshiba_T9769 

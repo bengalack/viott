@@ -67,3 +67,15 @@
     in a, (0x06)                ; Assuming this one is not in use
 .endm
 
+.macro macroTEST_A_UNROLL
+    inc a
+.endm
+
+.macro macroTEST_B_STARTUP
+    ld hl, #0x8000              ; Reads RAM in dos, ROM in ROM. 22
+    ret
+.endm
+
+.macro macroTEST_B_UNROLL
+    cpi
+.endm

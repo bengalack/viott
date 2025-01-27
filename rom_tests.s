@@ -51,14 +51,19 @@ _runTestAsmInMem::  ; this address/symbol is reused in every segment in page 2
 .endm
     ret
 
-    .area _SEG8 ; !in06FMT
+    .area _SEG8 ; !in06
 .rept 75000/12  ; divide by the cost of the unroll
     macroTEST_9_UNROLL
 .endm
     ret
 
-    .area _SEG9 ; !in06RAM
-.rept 75000/12  ; divide by the cost of the unroll
-    macroTEST_9_UNROLL
+    .area _SEG9 ; !inca
+.rept 75000/5  ; divide by the cost of the unroll
+    macroTEST_A_UNROLL
 .endm
-    ret    
+    ret
+
+    .area _SEGA ; !cpi
+.rept 75000/18  ; divide by the cost of the unroll
+    macroTEST_B_UNROLL
+.endm
