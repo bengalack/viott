@@ -20,8 +20,10 @@ We measure multiple sets of the tests to see if there are any deviations (as [th
 The tests are run in both 50Hz and 60Hz (screen will blink during change). Colors will also change when we do testing towards the vdp palette port. After a switch of frequency we do a halt. Tests has shown that not doing this, skews the data measured directly after the frequency change.
 
 ### Output examples ###
-
+__Panasonic A1-ST turboR:__
 <img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_3_a1-st.JPEG" />
+
+__Panasonic FS-A1 MSX2:__
 <img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_3_fs-a1.JPEG" />
 
 ### Briefly on the ![tests](https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/tests_as_macros.inc) ###
