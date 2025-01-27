@@ -1,11 +1,14 @@
-@set NAME=viott
+@set ONAME=viott
+@set OBJ_PATH=objs\
+@set DEFS=-DROM_OUTPUT_FILE=1 
 
-@REM --code-loc value below is found from the dos_crt.sym file - add the value of _HEADER0 to .org (0x100)
-@REM --data-loc is set to 0 to make it follow code, otherwise it lands at 0x8000 it seems
-sdasz80 -o -s -p -w objs\dos_crt.rel dos_crt.s
-sdasz80 -o -s -p -w objs\vdptestasm.rel vdptestasm.s
-sdcc --code-loc 0x010E --data-loc 0 -mz80 --no-std-crt0 --opt-code-speed objs\dos_crt.rel objs\vdptestasm.rel %NAME%.c -o objs\%NAME%.ihx
+sdasz80 -o -s -p -w %OBJ_PATH%crt.rel crt.s
+sdasz80 -o -s -p -w %OBJ_PATH%msx_dos_header.rel msx_dos_header.s
+sdasz80 -o -s -p -w %OBJ_PATH%vdptestasm.rel vdptestasm.s
+sdasz80 -o -s -p -w %OBJ_PATH%runhere.rel runhere.s
+sdasz80 -o -s -p -w %OBJ_PATH%vdptest_ramcode.rel vdptest_ramcode_dos.s
+sdcc -c -mz80 --opt-code-speed vdptest.c -o %OBJ_PATH%vdptest.rel
 
-@REM -s argument is n*16384, where default is n=2 (amend when you get 'error: size of the buffer is too small')
-@REM makebin -s 65535 -p -o 0x100 objs\%NAME%.ihx dska\%NAME%.com
-makebin -p -o 0x100 objs\%NAME%.ihx dska\%NAME%.com
+sdcc --code-loc 0x0100 --data-loc 0 -mz80 --no-std-crt0 --opt-code-speed %OBJ_PATH%crt.rel %OBJ_PATH%msx_dos_header.rel %OBJ_PATH%vdptestasm.rel %OBJ_PATH%vdptest_ramcode.rel %OBJ_PATH%vdptest.rel %OBJ_PATH%runhere.rel -o %OBJ_PATH%%ONAME%.ihx
+
+MSXhex %OBJ_PATH%%ONAME%.ihx -s 0x0100 -b 0x4000 -o dska\%ONAME%.com
