@@ -10,29 +10,151 @@
 
 ; ----------------------------------------------------------------------------
 ; CONSTANTS
-    BIOS_CHPUT  .equ 0x00A2
-    CALSLT      .equ 0x001C
-    RDSLT       .equ 0x000C
-    EXPTBL      .equ 0xFCC1
+    BIOS_CHPUT      .equ 0x00A2
+    CALSLT          .equ 0x001C
+    RDSLT           .equ 0x000C
+    EXPTBL          .equ 0xFCC1
 
-    INIPLT      .equ 0x0141
-    RSTPLT      .equ 0x0145
-    ; BDOS        .equ 0x0005             ; "Basic Disk Operating System"
-    ; BDOS_STROUT .equ 9                  ;.string output
+    INIPLT          .equ 0x0141
+    RSTPLT          .equ 0x0145
+    ; BDOS           .equ 0x0005             ; "Basic Disk Operating System"
+    ; BDOS_STROUT    .equ 9                  ;.string output
 
-    CHGMOD      .equ 0x005F             ; BIOS routine used to initialize the screen
+    CHGMOD          .equ 0x005F             ; BIOS routine used to initialize the screen
 
-    CHGCPU      .equ 0x0180             ; tame that turbo please
-    GETCPU      .equ 0x0183
+    CHGCPU          .equ 0x0180             ; tame that turbo please
+    GETCPU          .equ 0x0183
 
-    VDPPORT1	.equ 0x99
+    VDPPORT1	    .equ 0x99
 
-    VDP_REG9    .equ 0xFFE8             ; mirror
-    FRQ_BITMASK .equ #0b00000010        ; to be used with VDP_REG9
+    VDP_REG9        .equ 0xFFE8             ; mirror
+    FRQ_BITMASK     .equ #0b00000010        ; to be used with VDP_REG9
 
-    NMI         .equ 0x0066             ; subrom stuff
-    EXTROM      .equ 0x015f             ; subrom stuff
-    H_NMI       .equ 0xfdd6             ; subrom stuff
+    NMI             .equ 0x0066             ; subrom stuff
+    EXTROM          .equ 0x015f             ; subrom stuff
+    H_NMI           .equ 0xfdd6             ; subrom stuff
+
+    RTC_PORT_REG    .equ 0xB4               ; Reg 0-15
+    RTC_PORT_DATA   .equ 0xB5               ; read/write, note this chip is 4 bits... (jeeeez)
+
+    VDPIO           .equ 0x98               ; VRAM Data (Read/Write)
+    VDPPORT1        .equ 0x99
+    VDPPALETTE      .equ 0x9A
+    VDPSTREAM       .equ 0x9B
+
+;-------------------------
+; Uses the RTC clock: https://www.msx.org/wiki/Real_Time_Clock_Programming
+;
+; You can do "in a, ( RTC_PORT_DATA )" repeatedly after this to poll value
+;
+; COST: 73 cycles (+ the call(18))
+; IN: 		A - register in block 0
+; OUT: 		-
+; Modifies: AF, AF'
+;-------------------------
+; u8 setupClockForDigitRead( u8 uBlock0RegID );
+_setupClockForDigitRead::
+
+	ex		af, af'
+
+	ld 		a, #13					; set reg 13 to set block
+	out		( RTC_PORT_REG ), a
+	ld		a, #8					; block 0 and (re-)"enable timer" seconds? think this one needs to be set to make clock tick
+	out		( RTC_PORT_DATA ), a
+
+	ex		af, af'
+	out		( RTC_PORT_REG ), a
+
+	ret
+
+
+; Cost: 60+73 = 133 cycles
+; trashes AF, AF'
+.macro recordTime regid addr
+    ld      a,#regid
+    call    _setupClockForDigitRead
+	in		a,(RTC_PORT_DATA)
+	and		#0x0F
+    ld      (addr),a
+.endm
+
+; ----------------------------------------------------------------------------
+; This one runs fully in DI.
+; ASSUMES:
+;           that the test code is present at _runTestAsmInMem (normally 0x8000)
+; MODIFIES: 
+;
+; void longTest(void);
+_longTest::
+
+    di
+
+    ; set up for changing background color every time we send a byte to 0x9B port
+    ld      a,#7|0x80               ; "R#7 border colour", but plan for NON-autoincrement
+    out     (VDPPORT1),a
+    ld      a,#17|0x80              ; reg write in "R#17 | indirect specification of R#n"
+    out     (VDPPORT1),a
+
+    ; set up for reading, in case we test reads
+    ld      a,#1                    ; get status for S#1
+    out		(VDPPORT1), a			; status register number
+    ld		a,#0x8F				    ; VDP register R#15
+    out		(VDPPORT1), a			; out VDP register number
+
+    ld      de,#438                 ; total iterations of ROM-block (to be used far down)
+    ld      c,#0x0F                 ; just a quick mask, as these are 4 bit only
+
+    ; SYNCRONIZING with the RTC - we kick off RIGHT after the digit flipped
+    ld      a,#0                    ; lower digit of the seconds (values 0-9)
+    call    _setupClockForDigitRead
+
+	in		a,(RTC_PORT_DATA)
+	and		c
+
+    add     a,#2                    ; inc by two seconds, to avoid a tick while doing these preps
+    cp      #0x0A
+    jr      c,weiter
+    sub     #0x0A
+
+weiter:
+    ld      b, a
+
+spin_0:                             ; spin until the right value occurs
+	in		a, (RTC_PORT_DATA)
+	and		c
+    cp      b
+    jp      nz,spin_0               ; this will loop forever when the clock is not working
+    ; TIMING STARTS HERE (cycle counting)
+
+    ld      (_g_uSecondsL0),a
+    
+    recordTime 1 _g_uSecondsH0      ; 133 cycles
+    recordTime 2 _g_uMinsL0         ; 133 cycles
+    recordTime 3 _g_uMinsH0         ; 133 cycles
+
+    call    _runTestAsmInMem
+
+    ; grab timestamp
+encore_une_fois:
+    recordTime 0 _g_uSecondsL1
+    ld      b,a
+    recordTime 1 _g_uSecondsH1
+    recordTime 2 _g_uMinsL1
+    recordTime 3 _g_uMinsH1
+
+    ld      a,#0                    ; check if the second counter moved while we grabbed the timestamp. Re-fetch if so
+    call    _setupClockForDigitRead
+	in		a,(RTC_PORT_DATA)
+	and		#0x0F
+    cp      b
+    jp      nz, encore_une_fois
+
+    ; fix colors
+    ld      a,#0xF4
+    out     (VDPSTREAM),a
+
+    ei
+    ret
 
 ; ----------------------------------------------------------------------------
 ; MODIFIES: AF
@@ -98,7 +220,7 @@ _setVRAMAddressNI::
 
 	ld      a, d                    ; set bits 8-13
 	or      b                       ; + write access via bit 6?
-	out     (#VDPPORT1), a       
+	out     (VDPPORT1), a       
     ret
 
 ; ----------------------------------------------------------------------------
@@ -171,7 +293,95 @@ _changeCPU::
     push    ix
     ld      ix, #CHGCPU
     call    callSlot
+
     pop     ix
+    ret
+
+; ----------------------------------------------------------------------------
+; Uses Matsushita device
+; from here: https://map.grauw.nl/resources/msx_io_ports.php#expanded_io
+;
+; MODIFIES:     AF, BC
+; RETURN:       A (bool)
+;
+; bool hasTurboFeature(void) __preserves_regs(d,e,h,l,iyl,iyh);
+_hasTurboFeature::
+
+    ld      b, #0           ; return value, default 0 (false)
+    in      a,(0x40)
+    cpl
+    ld      c,a
+    ld      a,#8
+    out     (0x40),a        ; out the manufacturer code 8 (Panasonic) to I/O port 40h
+    in      a,(0x40)        ; read the value you have just written
+    cpl                     ; complement all bits of the value
+    cp      #8              ; if it does not match the value you originally wrote,
+    jr      nz,bye_bye      ; it does not have the Panasonic expanded I/O ports
+    in      a,(0x41)
+    bit     2,a             ; is turbo mode available?
+    jr      nz,bye_bye
+    ld      b, #1           ; yes, it is enabled
+
+bye_bye:
+
+    ld      a,c
+    out     (0x40),a
+    ld      a, b
+    ret
+
+; ----------------------------------------------------------------------------
+; Uses Matsushita device
+; from here: https://map.grauw.nl/resources/msx_io_ports.php#expanded_io
+;
+; MODIFIES:     AF, BC
+; RETURN:       A (bool)
+;
+; bool isTurboEnabled(void) __preserves_regs(d,e,h,l,iyl,iyh);
+_isTurboEnabled::
+
+    ld      c,#0x40
+    in      a,(c)
+    cpl
+    ld      b,a
+    ld      a,#8
+    out     (c),a        ; out the manufacturer code 8 (Panasonic) to I/O port 40h
+
+    in      a,(0x41)
+    rra                     ; bit 0: is turbo mode on? 0==on
+    ld      a,#0
+    jr      c,bye_bye2
+    inc     a
+bye_bye2:
+    out     (c),b
+    ret
+
+; ----------------------------------------------------------------------------
+; Uses Matsushita device
+; from here: https://map.grauw.nl/resources/msx_io_ports.php#expanded_io
+;
+; bit 0 is turbo or not. 0=turbo, 1=normal
+;
+; MODIFIES: AF, BC, D
+;
+; void enableTurbo(bool bEnable) __preserves_regs(e,h,l,iyl,iyh);
+_enableTurbo::
+
+    xor     #1              ; flip the bit
+    ld      b,a
+
+    ld      c,#0x40
+    in      a,(c)
+    cpl
+    ld      d,a
+    ld      a,#8
+    out     (c),a           ; out the manufacturer code 8 (Panasonic) to I/O port 40h
+
+    in      a,(0x41)
+    and     #0b11111110
+    or      b
+    out     (0x41),a        ; enable turbo(?)
+
+    out     (c),d           ; retstore org device
     ret
 
 ; ----------------------------------------------------------------------------

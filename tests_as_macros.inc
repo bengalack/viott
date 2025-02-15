@@ -5,6 +5,13 @@
     ret
 .endm
 
+.macro macroTEST_END_SPIN ?spin; length: 6 bytes. Test cannot return, as it will mess up the presumed stack pointer
+    ld a, #1
+    ld (_g_bTooFast), a ; true
+spin:
+    jr spin
+.endm
+
 .macro macroTEST_0_UNROLL
     inc a
 .endm
@@ -78,4 +85,36 @@
 
 .macro macroTEST_B_UNROLL
     cpi
+.endm
+
+.macro macroTEST_LONG
+; The max possible amount of "OUT(n),a" instructions in one 60Hz frame is:
+; 59736/12 = 4978, ie. for every extra cycle on an I/O command in a normalized frame,
+; there will be added 4978 cycles. Lets run so many frames that the excess cycles,
+; at least, amounts to ONE FULL SECOND. That is:
+; 60*(59736/4978) = 60*12 = 720, or 12 seconds
+; 
+; in cycles, this is 12*60*59736 = 43009920, or 3584160 outs.
+; with 8188 outs in one page (16384 bytes), that is 438 times of looping over that page with unrolled outs
+;
+; assumes:
+; de is set as counter (438)
+; vdp is set up to do write to a reg (border?)
+; in case of using "in" status reg should be set too.
+
+
+
+; .rept (0x4000-7)/2  ; = 8188 instructions
+;     out (0x9b),a
+; .endm
+.rept (0x4000-7)/4  ; = 8188 instructions
+    out (0x9b),a    ; this is actually waaaaay to speedy
+    in a,(0x99)
+.endm
+
+    dec de
+    ld a,d
+    or e
+    jp nz,_runTestAsmInMem
+    ret
 .endm

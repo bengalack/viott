@@ -1,21 +1,23 @@
 # VIOTT - VDP I/O Timing Tester
 Test **MSX2 (and above)** VDPs for added wait cycles - which are reported on various systems/engines. Written in C with help from assembly.
 
-__The concept__: We measure the amount of cycles we can spend during a frame, by using normal, "safe" non-I/O instructions. Then we run frames with I/O instructions, and by measuring how many instructions we were able to execute during that time, we find the cost of each I/O instruction.
+__Concept 1:__ We run massive amounts of unrolled OUTs in "DI mode". So many that, in case of a +1 cycle on an OUT, will result is a full second difference (+2 cycles => 2 seconds difference). We use the RTC to measure this.
 
 I enable a custom, lightweight ISR, add tons of unrolled I/O-commands, and read the value of the PC-register when the frame is finished.
 
     I/O command cycle cost = available frame total time / number of I/O instructions executed
 
-**Format/Medium:** In v1.3 I added support for ROM as well (ASCII16). This made the code a bit more complex, sadly. From now on, each test needs to partly be defined two places - one for RAM setup at runtime and one for ROM segments, prepared up front. ROM version was added to find if there are differences when code reside in ROM vs RAM.
+__Format/Medium:__ In v1.3 I added support for ROM as well (ASCII16). This made the code a bit more complex, sadly. From now on, each test needs to partly be defined two places - one for RAM setup at runtime and one for ROM segments, prepared up front. ROM version was added to find if there are differences when code reside in ROM vs RAM.
 
-**Assumptions:**
-* The cost of kicking off an interrupt: **14 cycles** ([source](http://www.z80.info/interrup.htm)). Not used for the cycle cost calculations, but used for the simple "available cycles per frame" calculation and comparison. 
+__Assumptions:__
+* The cost of kicking off an interrupt: __14 cycles__ ([source](http://www.z80.info/interrup.htm)). Not used for the cycle cost calculations, but used for the simple "available cycles per frame" calculation and comparison. 
 * Running the code from internal memory is running at optimal speed with no delays, hence, ALL code that is not the unrolled instructions, are put in RAM, this also includes any test setup code and the ISR both in DOS and in ROM mode.
 
 We measure multiple sets of the tests to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations. Default is 16 iterations in a set.
 
 The tests are run in both 50Hz and 60Hz (screen will blink during change). Colors will also change when we do testing towards the vdp palette port. After a switch of frequency we do a halt. Tests has shown that not doing this, skews the data measured directly after the frequency change.
+
+__Concept 2:__ We run massive amounts of unrolled OUTs in "DI mode". So many that, in case of a +1 cycle on an OUT, the test result will be one full second difference (+2 cycles => 2 seconds difference). We use the [RTC](https://www.msx.org/wiki/Real_Time_Clock_Programming) to measure this. This test is only done is 60Hz atm. The result from this test is found as last number in the summary like `VDP I/O:+1,+1`. It should confirm the first number, measured in concept 1.
 
 ### Output examples ###
 __Panasonic A1-ST turboR:__
@@ -51,6 +53,7 @@ __Naming of the tests:__
 * It all stems from the waitcycles reported on MSX-Engine T9769A/B/C: https://www.msx.org/wiki/Toshiba_T9769 
 
 ### Dependencies & Build ##
+* Your MSX needs a working RTC (battery not needed, it just need to tick), if not the application will hang forever
 * Tried to make this independent of various libraries. This to make everything as light and transparent as possible.
 * Wanted to use as many BIOS-calls as possible, to reduce code and stay as easy to read for others.
 * [SDCC](https://sdcc.sourceforge.net/) v4.2 or later, is needed though, to enable C.

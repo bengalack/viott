@@ -4,7 +4,7 @@
 
 sdasz80 -o -s -p -w %OBJ_PATH%crt.rel crt.s
 sdasz80 -o -s -p -w %OBJ_PATH%msx_dos_header.rel msx_dos_header.s
-sdasz80 -o -s -p -w %OBJ_PATH%vdptestasm.rel vdptestasm.s
+sdasz80 -o -s -p -w -g %OBJ_PATH%vdptestasm.rel vdptestasm.s
 sdasz80 -o -s -p -w %OBJ_PATH%runhere.rel runhere.s
 sdasz80 -o -s -p -w %OBJ_PATH%vdptest_ramcode.rel vdptest_ramcode_dos.s
 sdcc -c -mz80 --opt-code-speed vdptest.c -o %OBJ_PATH%vdptest.rel

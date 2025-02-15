@@ -12,6 +12,7 @@
     .globl      _g_pPCReg
     .globl      _g_pFncCurStartupBlock
     .globl      _runTestAsmInMem
+    .globl      _g_bTooFast
 
 _UPPERCODE_BEGIN::
 
@@ -24,6 +25,9 @@ _commonStartForAllTests::
 
     ld      a, #01
     ld      (_g_bStorePCReg), a         ; true
+
+    xor     a
+    ld      (_g_bTooFast), a            ; false
 
     ld      hl, (_g_pFncCurStartupBlock); 17
     call    call_hl                     ; 18
