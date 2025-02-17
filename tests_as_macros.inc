@@ -5,11 +5,16 @@
     ret
 .endm
 
-.macro macroTEST_END_SPIN ?spin; length: 6 bytes. Test cannot return, as it will mess up the presumed stack pointer
-    ld a, #1
-    ld (_g_bTooFast), a ; true
-spin:
-    jr spin
+; May seem corny to have ei/di in a test timed using interrupt, but this one saves
+; us from special handling of PC-reg calculations if interrupt occured inside this tail
+; interrupt occuring inside this tail will introduce an inaccuracy between 0 and 45
+; cycles, and will only happen on fast (turbo and R800) modes. This is at maximum:
+; 0,055% deviation (using quick 5 cycle test operation, smaller deviation on other tests)
+.macro macroTEST_TAIL   ; length:   7 bytes. 45 cycles.
+    di                  ; 1 byte,   5 cycles
+    inc 0(iy)           ; 3 bytes, 25 cycles (add the round-counter)
+    ei                  ; 1 byte,   5 cycles (ei happens after the next command)
+    jp (ix)             ; 2 bytes, 10 cycles
 .endm
 
 .macro macroTEST_0_UNROLL
@@ -87,7 +92,23 @@ spin:
     cpi
 .endm
 
-.macro macroTEST_LONG
+
+.macro macroTEST_LONG_UNROLL
+    out (0x9b),a
+;     out (0x9b),a    ; this is actually waaaaay to speedy
+;     in a,(0x99)
+.endm
+
+; length of below block is 7 (SIZE_LONGTEST_TAIL)
+.macro macroTEST_LONG_TAIL
+    dec de
+    ld a,d
+    or e
+    jp nz,_runTestAsmInMem
+    ret
+.endm
+
+; TODO: Adapt for turbo speeds also
 ; The max possible amount of "OUT(n),a" instructions in one 60Hz frame is:
 ; 59736/12 = 4978, ie. for every extra cycle on an I/O command in a normalized frame,
 ; there will be added 4978 cycles. Lets run so many frames that the excess cycles,
@@ -101,20 +122,11 @@ spin:
 ; de is set as counter (438)
 ; vdp is set up to do write to a reg (border?)
 ; in case of using "in" status reg should be set too.
+.macro macroTEST_LONG
 
-
-
-; .rept (0x4000-7)/2  ; = 8188 instructions
-;     out (0x9b),a
-; .endm
-.rept (0x4000-7)/4  ; = 8188 instructions
-    out (0x9b),a    ; this is actually waaaaay to speedy
-    in a,(0x99)
+.rept (0x4000-7)/2  ; = 8188 instructions
+    macroTEST_LONG_UNROLL
 .endm
 
-    dec de
-    ld a,d
-    or e
-    jp nz,_runTestAsmInMem
-    ret
+    macroTEST_LONG_TAIL
 .endm

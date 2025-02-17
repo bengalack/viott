@@ -12,27 +12,30 @@
     .globl      _g_pPCReg
     .globl      _g_pFncCurStartupBlock
     .globl      _runTestAsmInMem
-    .globl      _g_bTooFast
+    .globl      _g_uRomExtraRounds
 
 _UPPERCODE_BEGIN::
 
 ; ------------------
 ; Common start for tests (found other places)
-; Cost after halt: 68 + 5 (73) + the cost of _g_pFncCurStartupBlock (which we will find in TestDescriptor.uStartupCycleCost)
+; Cost after halt: 72 + the cost of _g_pFncCurStartupBlock (which we will find in TestDescriptor.uStartupCycleCost)
 ; ------------------
 _commonStartForAllTests::
+    push    ix
+    ld      ix,#_runTestAsmInMem
+
+    ld      iy,#_g_uRomExtraRounds
+    ld      0(iy),#0
+
     halt                                ; ensure that the following commands are not interrupted (di/ei is not safe!)
 
     ld      a, #01
     ld      (_g_bStorePCReg), a         ; true
 
-    xor     a
-    ld      (_g_bTooFast), a            ; false
-
     ld      hl, (_g_pFncCurStartupBlock); 17
     call    call_hl                     ; 18
 
-    jp      _runTestAsmInMem            ; 11
+    jp      (ix)                        ; 10
 
 call_hl::
     jp      (hl)                        ; 5
@@ -41,6 +44,7 @@ call_hl::
 ; Common end
 ; ------------------
 commonTestRetSpot::
+    pop     ix
     ret
 
 ; ----------------------------------------------------------------------------

@@ -61,11 +61,12 @@
 
 // Typedefs & defines --------------------------------------------------------
 //
-#define NUM_ITERATIONS      1      // Can`t see that many are needed, 16 seems ok
+#define NUM_ITERATIONS      4      // Can`t see that many are needed, 16 seems ok
 #define TEST_SEG_OFFSET     2	    // Test segments starts here. Only used in ROM code
 #define CALIBRATION_TESTS   2	    // We use these for finding the overall available cycles in a frame
 #define FRM_DIFF_THRESHOLD  7	    // If diff is bigger, state NOT OK (guessing on this value!)
-#define SIZE_RETURN_BLOCK   6	    // 6 bytes
+#define SIZE_TAIL_BLOCK     7	    // bytes
+#define SIZE_LONGTEST_TAIL  7	    // bytes
 
 typedef signed char         s8;
 typedef unsigned char       u8;
@@ -81,21 +82,21 @@ typedef const void          (function)(void);
 #define break()				{__asm in a,(0x2e) __endasm;} // for debugging. may be risky to use as it trashes A
 #define arraysize(arr)      (sizeof(arr)/sizeof((arr)[0]))
 
-enum three_way { NO, YES, NA };
-enum freq_variant { NTSC, PAL, FREQ_COUNT };
-enum calc_bitmask { CC_NONE        = 0,
-                    CC_VDP_DIFF    = 0b1,
-                    CC_ROM_DIFF_A  = 0b10,
-                    CC_ROM_DIFF_B  = 0b100,             // ROM I/O
-                    CC_ROM2_DIFF_A = 0b1000,
-                    CC_ROM2_DIFF_B = 0b10000,           // ROM fundamental
-                    CC_ROM3_DIFF_A = 0b100000,
-                    CC_ROM3_DIFF_B = 0b1000000 };       // ROM references (like "ld a,(hl)")
+enum cpu_variant {Z80_PLAIN, Z80_TURBO, R800_ROM, R800_DRAM};
+enum three_way {NO, YES, NA};
+enum freq_variant {NTSC, PAL, FREQ_COUNT};
+enum calc_bitmask {CC_NONE        = 0,
+                   CC_VDP_DIFF    = 0b1,
+                   CC_ROM_DIFF_A  = 0b10,
+                   CC_ROM_DIFF_B  = 0b100,              // ROM I/O
+                   CC_ROM2_DIFF_A = 0b1000,
+                   CC_ROM2_DIFF_B = 0b10000,            // ROM fundamental
+                   CC_ROM3_DIFF_A = 0b100000,
+                   CC_ROM3_DIFF_B = 0b1000000};         // ROM references (like "ld a,(hl)")
 
 typedef struct {
     u8*                     szTestName;                 // max 9 characters
 	function*               pFncStartupBlock;
-	u8                      uStartupBlockSize;
 	function*               pFncUnrollInstruction;       // or plural.
 	u8                      uUnrollInstructionsSize;
 	u8                      uUnrollSingleInstructionSize;
@@ -108,7 +109,7 @@ typedef struct {
 } TestDescriptor;
 
 typedef struct {
-    u16 nInt;
+    u32 lInt;
     u8  uFrac;
 } IntWith2Decimals;
 
@@ -142,7 +143,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {
                                             "sync1",            // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_0_UNROLL,      // void             pFncUnrollInstruction;
                                             1,                  // u8               uUnrollInstructionsSize;
                                             1,                  // u8               uUnrollSingleInstructionSize;
@@ -156,7 +156,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {
                                             "sync2",            // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_1_UNROLL,      // void             pFncUnrollInstruction;
                                             1,                  // u8               uUnrollInstructionsSize;
                                             1,                  // u8               uUnrollSingleInstructionSize;
@@ -170,7 +169,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {
                                             "out98",            // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_2_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -184,7 +182,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {
                                             "in98",             // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_3_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -198,7 +195,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {
                                             "in98x",            // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_4_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -212,7 +208,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {
                                             "in99",             // u8*              szTestName;
                                             TEST_5_STARTUP,     // function*        pFncStartupBlock;
-                                            8,                  // u8               uStartupBlockSize;
                                             TEST_5_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -226,7 +221,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   // Palette test, must init first and restore palette after
                                             "out9A",            // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_6_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -240,7 +234,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   // Stream port test
                                             "out9B",            // u8*              szTestName;
                                             TEST_7_STARTUP,     // function*        pFncStartupBlock;
-                                            8,                  // u8               uStartupBlockSize;
                                             TEST_7_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -254,7 +247,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {
                                             "outi98FMT",        // u8*              szTestName;
                                             TEST_8_STARTUP,     // function*        pFncStartupBlock;
-                                            5,                  // u8               uStartupBlockSize;
                                             TEST_8_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -268,7 +260,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   // Using same tests as above
                                             "outi98RAM",        // u8*              szTestName;
                                             TEST_8_STARTUP,     // function*        pFncStartupBlock;
-                                            5,                  // u8               uStartupBlockSize;
                                             TEST_8_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -282,7 +273,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   // Just pick a non-used port (I hope), and check the speed
                                             "!in06FMT",         // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_9_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -296,7 +286,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   // Just pick a non-used port (I hope), and check the speed
                                             "!in06RAM",         // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_9_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -310,7 +299,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   
                                             "!incaFMT",         // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_A_UNROLL,      // void             pFncUnrollInstruction;
                                             1,                  // u8               uUnrollInstructionsSize;
                                             1,                  // u8               uUnrollSingleInstructionSize;
@@ -324,7 +312,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   
                                             "!incaRAM",         // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            0,                  // u8               uStartupBlockSize;
                                             TEST_A_UNROLL,      // void             pFncUnrollInstruction;
                                             1,                  // u8               uUnrollInstructionsSize;
                                             1,                  // u8               uUnrollSingleInstructionSize;
@@ -338,7 +325,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   
                                             "!cpiFMT",          // u8*              szTestName;
                                             TEST_B_STARTUP,     // function*        pFncStartupBlock;
-                                            4,                  // u8               uStartupBlockSize;
                                             TEST_B_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -352,7 +338,6 @@ const TestDescriptor    g_aoTest[] = {
                                         {   
                                             "!cpiRAM",          // u8*              szTestName;
                                             TEST_B_STARTUP,     // function*        pFncStartupBlock;
-                                            4,                  // u8               uStartupBlockSize;
                                             TEST_B_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
@@ -365,15 +350,18 @@ const TestDescriptor    g_aoTest[] = {
                                         }
                                      };
 
+const u8* const         g_aszCPUModes[]      = {"z80 @ 3.5MHz","z80 @ 5.7MHz (turbo)", "r800 @ 7.2MHz (comp)", "r800 @ 7.2MHz (DRAM)"};
+
+
 const u8                g_szErrorMSX[]      = "MSX2 and above is required";
-const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.4 Test: %d repeats, %s, z80 3.5MHz supported\r\n"; 
+const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.4 - %d repeats, %s, CPU: %s\r\n"; 
 const u8                g_szWait[]          = "...please wait 30 seconds or so...";
 const u8                g_szRemoveWait[]    = "\r                                  \r\n";
-const u8                g_szReportCols[]    = "          Hz  avg      min   max   cost  ~d | Hz  avg      min   max   cost  ~d\r\n";
-const u8                g_szReportValues[]  = "%9s %2s %5hu.%02d %5hu %5hu %2d.%02d %s%+d | %2s %5hu.%02d %5hu %5hu %2d.%02d %s%+d\r\n";
+const u8                g_szReportCols[]    = "               avg   min   max  cost  ~d |      avg   min   max  cost  ~d\r\n";
+const u8                g_szReportValues[]  = "%9s %5ld.%02d %5ld %5ld %2ld.%02d %+3d | %5ld.%02d %5ld %5ld %2ld.%02d %+3d\r\n";
 
-const u8                g_szSpeedHdrCols[]  = "          Hz computer  norm  delta (~d)     | Hz computer  norm  delta (~d)\r\n";
-const u8                g_szSpeedResult[]   = "Frmcycles %s %8ld %5ld %+11ld     | %s %8ld %5ld %+11ld\r\n";
+const u8                g_szSpeedHdrCols[]  = "          Hz computer  norm  delta (~d)  | Hz computer  norm  delta (~d)\r\n";
+const u8                g_szSpeedResult[]   = "Frmcycles %s %8ld %5ld %+11ld  | %s %8ld %5ld %+11ld\r\n";
 
 const u8                g_szSummary[]       = "[SUMMARY]  Cycles:%s  VDP_I/O:%+d,%+d%s\r\n";
 const u8                g_szSummaryROM[]    = "  ROM:%+d  ROM_I/O:%+d  ROM_REF:%+d";
@@ -384,27 +372,31 @@ const u8                g_szNewline[]       = "\r\n";
 const u8* const         g_aszFreq[]         = {"60", "50"}; // must be chars
 
 const u32               anFRAME_CYCLES_TARGET[]     = {59736, 71364}; // assumed "ideal"
-const u16               FRAME_CYCLES_INT            = 171;
-const u16               FRAME_CYCLES_INT_KICK_OFF   = 14 + 11; // +11 is the JP at 0x0038
-const u16               FRAME_CYCLES_COMMON_START   = 92;
+const u8                FRAME_CYCLES_INT            = 171;
+const u8                FRAME_CYCLES_INT_KICK_OFF   = 14 + 11; // +11 is the JP at 0x0038
+const u8                FRAME_CYCLES_COMMON_START   = 72;   // cycles after halt
+
+const u8                FRAME_CYCLES_TAIL_Z80   = 45;   // cycles after halt
+
 
 // RAM variables -------------------------------------------------------------
 //
+enum cpu_variant        g_eCPUMode;
 void* __at(0x0039)      g_pInterrupt;       // We assume that 0x0038 already holds 0xC3 (JP) in dos mode at startup
 void*                   g_pInterruptOrg;
 u8                      g_auBuffer[120];    // temp/general buffer here to avoid stack explosion
 
 volatile u8*            g_pPCReg;           // pointer to PC-reg when the interrupt was triggered
 volatile bool           g_bStorePCReg;
-volatile bool           g_bTooFast;
+volatile bool           g_uRomExtraRounds;  // test is "too" fast, one full segment is processed multiple times
 function*               g_pFncCurStartupBlock;
 
-                        // RESULTS BELOW
+                        // RESULTS BELOW. As R800 can have instructions of 1 cycle only, we can get iterations with > u16 in PAL
 float                   g_afFrmTotalCycles     [FREQ_COUNT];
-u16                     g_anFrameInstrResult   [FREQ_COUNT][arraysize(g_aoTest)][NUM_ITERATIONS];
+u32                     g_alFrameInstrResult   [FREQ_COUNT][arraysize(g_aoTest)][NUM_ITERATIONS];
 float                   g_afFrameInstrResultAvg[FREQ_COUNT][arraysize(g_aoTest)];
-u16                     g_anFrameInstrResultMin[FREQ_COUNT][arraysize(g_aoTest)];
-u16                     g_anFrameInstrResultMax[FREQ_COUNT][arraysize(g_aoTest)];
+u32                     g_alFrameInstrResultMin[FREQ_COUNT][arraysize(g_aoTest)];
+u32                     g_alFrameInstrResultMax[FREQ_COUNT][arraysize(g_aoTest)];
 float                   g_afFinalTestCost      [FREQ_COUNT][arraysize(g_aoTest)];
 s8                      g_sVDPDiff;
 s8                      g_sVDPDiff2;
@@ -423,8 +415,8 @@ u8                      g_uSecondsH1;
 u8                      g_uMinsL1;
 u8                      g_uMinsH1;
 
-u16                     g_nMax; // variable made global for easier debugging
-u8 debug1, debug2;
+// u16                     g_nMax; // variable made global for easier debugging
+// u8 debug1, debug2;
 
 // --------------------------------------------------------------------------
 // Specials in case of ROM outfile
@@ -468,8 +460,8 @@ __asm .include "tests_as_macros.inc" ; // also used by the tests below
     macroTEST_EMPTY
 __endasm;  
 }
-void TEST_END(void) __naked {
-__asm macroTEST_END_SPIN __endasm;
+void TEST_TAIL(void) __naked {
+__asm macroTEST_TAIL __endasm;
 }
 void TEST_0_UNROLL(void) __naked {
 __asm macroTEST_0_UNROLL __endasm;
@@ -519,7 +511,13 @@ __asm macroTEST_B_STARTUP __endasm;
 void TEST_B_UNROLL(void) __naked {
 __asm macroTEST_B_UNROLL __endasm;
 }
-
+void TEST_LONGTEST_UNROLL(void) __naked {
+__asm macroTEST_LONG_UNROLL __endasm;
+}
+void TEST_LONGTEST_TAIL(void) __naked {
+__asm macroTEST_LONG_TAIL __endasm;
+}
+        
 // ---------------------------------------------------------------------------
 void setCustomISR(void)
 {
@@ -549,6 +547,20 @@ void restoreOriginalISR(void)
 }
 
 // ---------------------------------------------------------------------------
+void enableR800FullSpeedIfAvailable(bool bEnable)
+{
+    if(getMSXType() == 3) // MSX turbo R
+        changeCPU(bEnable ? 2 : 0); // 0=Z80 (ROM) mode, 1=R800 ROM  mode, 2=R800 DRAM mode
+}
+
+// ---------------------------------------------------------------------------
+void enableTurboIfAvailable(bool bEnable)
+{
+    if(hasTurboFeature())
+        enableTurbo(bEnable);
+}
+
+// ---------------------------------------------------------------------------
 // Special rounding. Caters for the 3rd decimal already presented to user
 // rounded up (using +0.005). Just to avoid making it look like a bug.
 //
@@ -559,14 +571,14 @@ s8 signedRoundX(float f)
 
 // ---------------------------------------------------------------------------
 //
-u16 abs16( s16 s )
+u32 abs32(s32 s)
 {
     return s<0?-s:s;
 }
 
 // ---------------------------------------------------------------------------
 //
-u8 abs( s8 s )
+u8 abs(s8 s)
 {
     return s<0?-s:s;
 }
@@ -588,36 +600,22 @@ void prepareVDP(enum three_way eRead)
 
 // ---------------------------------------------------------------------------
 // For DOS mode: Copy test in at runTestAsmInMem, X amount of unrolleds
-// filling a PAL frame (+ a buffer: totals 75000 cycles as max in a frame)
 // Some tests are forced to run in RAM (i.e. dos mode). Like the first run.
 // As this seem to be the fastest, most accurate and reliable way to measure
 // the speed.
 //
 void setupTestInMemoryDOS(u8 uTest)
 {
-    // Below: The fastest instr (5 cycles, 1 byte) would max give 0x3A98 bytes
-    // Medium instr (8 cycles, 2 bytes) gives 0x493E bytes - we should be fine when using RAM (not ROM!)
-    // Our normal, minimum, case: OUT(n),a (12 cycles, 2 byte): 0x30D4 bytes
-    u8 n = g_aoTest[uTest].uUnrollInstructionsSize / g_aoTest[uTest].uUnrollSingleInstructionSize;
-    g_nMax = (u16)(((u32)75000 / g_aoTest[uTest].uRealSingleCost) / n);
-
-    debug1 = uTest;
-    debug2 = n;
-
-    if(g_nMax > 0x4000) // check when developing!
-    {
-        break();
-    }
-
+    u16 nMax = (u16)((u32)(0x4000 - SIZE_TAIL_BLOCK) / g_aoTest[uTest].uUnrollInstructionsSize);
     u8* p = (u8*) &runTestAsmInMem;
 
-    for(u16 n = 0; n < g_nMax; n++)
+    for(u16 n = 0; n < nMax; n++)
     {
         memcpy(p, *g_aoTest[uTest].pFncUnrollInstruction, g_aoTest[uTest].uUnrollInstructionsSize);
         p += g_aoTest[uTest].uUnrollInstructionsSize;
     }
 
-    memcpy(p, &TEST_END, SIZE_RETURN_BLOCK);
+    memcpy(p, &TEST_TAIL, SIZE_TAIL_BLOCK);
 }
 
 // ---------------------------------------------------------------------------
@@ -662,20 +660,25 @@ void setupTestInMemory(u8 uTest)
 // ---------------------------------------------------------------------------
 void runIteration(enum freq_variant eFreq, u8 uTest, u8 uIterationNum)
 {
-    prepareVDP( g_aoTest[ uTest ].eReadVRAM );
+    prepareVDP(g_aoTest[uTest].eReadVRAM);
+
+    // break();
 
     commonStartForAllTests();
 
-    if( g_bTooFast )
+    u16 nLength = (u16)g_pPCReg - (u16)&runTestAsmInMem;
+    u32 lInstructions = nLength/g_aoTest[uTest].uUnrollSingleInstructionSize;
+
+    if(g_uRomExtraRounds!=0)
     {
-        g_anFrameInstrResult[eFreq][uTest][uIterationNum] = 1;
+        u16 nTestBlocksInSegment = (u16)((u32)(0x4000 - SIZE_TAIL_BLOCK) / g_aoTest[uTest].uUnrollInstructionsSize);
+        u8 uDivider = g_aoTest[uTest].uUnrollInstructionsSize / g_aoTest[uTest].uUnrollSingleInstructionSize;
+        lInstructions += (u32)nTestBlocksInSegment * g_uRomExtraRounds / uDivider;
+
+        lInstructions += FRAME_CYCLES_TAIL_Z80 / g_aoTest[uTest].uRealSingleCost; // make dependent on CPU!
     }
-    else
-    {
-        u16 nLength = (u16)g_pPCReg - (u16)&runTestAsmInMem;
-        u16 nInstructions = nLength/g_aoTest[ uTest ].uUnrollSingleInstructionSize;
-        g_anFrameInstrResult[eFreq][uTest][uIterationNum] = nInstructions;
-    }
+
+    g_alFrameInstrResult[eFreq][uTest][uIterationNum] = lInstructions;
 }
 
 // ---------------------------------------------------------------------------
@@ -689,11 +692,24 @@ void runLongTest(void)
     enableInterrupt();
     ENABLE_SEGMENT_PAGE2(TEST_SEG_OFFSET+10);
 
+#else
+    u8 uUnrollInstructionsSize = 2;
+    u16 nMax = (u16)((u32)(0x4000 - SIZE_LONGTEST_TAIL) / uUnrollInstructionsSize);
+
+    u8* p = (u8*) &runTestAsmInMem;
+
+    for(u16 n = 0; n < nMax; n++)
+    {
+        memcpy(p, &TEST_LONGTEST_UNROLL, uUnrollInstructionsSize);
+        p += uUnrollInstructionsSize;
+    }
+
+    memcpy(p, &TEST_LONGTEST_TAIL, SIZE_LONGTEST_TAIL);
+#endif
+
     setPALRefreshRate(false);
     halt();                 // halt here is needed on AX-370, otherwise we get skewed results
     longTest();
-
-#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -702,15 +718,6 @@ void runAllIterations(void)
 
     initPalette();      // just in case we test/trash the palette
  
-    u8 uType = getMSXType();
-    u8 uCPUOrg = 0;
-
-    if(uType == 3)              // 3 = MSX turbo R
-    {
-        uCPUOrg = getCPU();
-        changeCPU(0);           // 0 = Z80 (ROM) mode
-    }
-
     bool bPALOrg = getPALRefreshRate();
 
     setCustomISR();
@@ -720,8 +727,16 @@ void runAllIterations(void)
         setPALRefreshRate((bool)f);
         halt();                 // halt here is needed on AX-370, otherwise we get skewed results
 
+        // break();
+
         for(u8 t = 0; t < arraysize(g_aoTest); t++)
         {
+                                                                // // test!
+                                                                // if(t == 11)
+                                                                //     enableTurboIfAvailable(true);
+                                                                // else if(t == 12)
+                                                                //     enableTurboIfAvailable(false);
+
             setupTestInMemory(t);
 
             for(u8 i = 0; i < NUM_ITERATIONS; i++)
@@ -729,15 +744,14 @@ void runAllIterations(void)
         }
     }
 
-    // runLongTest();
+    break();
+
+    runLongTest();
 
     setPALRefreshRate(bPALOrg);
 
     restoreOriginalISR();       // sets ROM in page 0 too
     restorePalette();           // uses BIOS. just in case the palette was messed up
-
-    if(uType == 3)              // restore orginal CPU
-        changeCPU(uCPUOrg);
 }
 
 // ---------------------------------------------------------------------------
@@ -773,50 +787,50 @@ void calcStatistics(void)
         for(u8  t = 0; t < arraysize(g_aoTest); t++)
         {
             u32 lTotal = 0;
-            u16 nMin = (u16)-1; // Wraps around to maximum u16 value
-            u16 nMax = 0;
+            u32 lMin = (u32)-1; // Wraps around to maximum u32 value
+            u32 lMax = 0;
 
             for(u8 i=0; i<NUM_ITERATIONS; i++)
             {
-                u16 n = g_anFrameInstrResult[f][t][i];
+                u32 n = g_alFrameInstrResult[f][t][i];
 
                 lTotal += n;
 
-                if(n < nMin)
-                    nMin = n;
+                if(n < lMin)
+                    lMin = n;
 
-                if(n > nMax)
-                    nMax = n;
+                if(n > lMax)
+                    lMax = n;
             }
 
             g_afFrameInstrResultAvg[f][t] = (float)lTotal/NUM_ITERATIONS;
-            g_anFrameInstrResultMin[f][t] = nMin;
-            g_anFrameInstrResultMax[f][t] = nMax;
+            g_alFrameInstrResultMin[f][t] = lMin;
+            g_alFrameInstrResultMax[f][t] = lMax;
         }
     }
 
     // Store the first test run as master timing for each frequency
     for(u8 f = 0; f < FREQ_COUNT; f++)
-        g_afFrmTotalCycles[f] = ( g_afFrameInstrResultAvg[f][0] * g_aoTest[0].uRealSingleCost + g_afFrameInstrResultAvg[f][1] * g_aoTest[1].uRealSingleCost )/2;
+        g_afFrmTotalCycles[f] = (g_afFrameInstrResultAvg[f][0] * g_aoTest[0].uRealSingleCost + g_afFrameInstrResultAvg[f][1] * g_aoTest[1].uRealSingleCost)/2;
 
     // populate the testcost float array
     for(u8 f = 0; f < FREQ_COUNT; f++)
         for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
             g_afFinalTestCost[f][t] = (g_afFrmTotalCycles[f] - (g_aoTest[t].uStartupCycleCost - g_aoTest[0].uStartupCycleCost)) / g_afFrameInstrResultAvg[f][t];
 
-    s8 sROMDiffA = getTestCostDiff( CC_ROM_DIFF_A );
-    s8 sROMDiffB = getTestCostDiff( CC_ROM_DIFF_B );
+    s8 sROMDiffA = getTestCostDiff(CC_ROM_DIFF_A);
+    s8 sROMDiffB = getTestCostDiff(CC_ROM_DIFF_B);
     g_sROMDiff = sROMDiffB - sROMDiffA; // ROM I/O
 
-    s8 sROM2DiffA = getTestCostDiff( CC_ROM2_DIFF_A );
-    s8 sROM2DiffB = getTestCostDiff( CC_ROM2_DIFF_B );
+    s8 sROM2DiffA = getTestCostDiff(CC_ROM2_DIFF_A);
+    s8 sROM2DiffB = getTestCostDiff(CC_ROM2_DIFF_B);
     g_sROM2Diff = sROM2DiffB - sROM2DiffA; // ROM fundament
 
-    s8 sROM3DiffA = getTestCostDiff( CC_ROM3_DIFF_A );
-    s8 sROM3DiffB = getTestCostDiff( CC_ROM3_DIFF_B );
+    s8 sROM3DiffA = getTestCostDiff(CC_ROM3_DIFF_A);
+    s8 sROM3DiffB = getTestCostDiff(CC_ROM3_DIFF_B);
     g_sROM3Diff = sROM3DiffB - sROM3DiffA; // ROM REFs
 
-    g_sVDPDiff = getTestCostDiff( CC_VDP_DIFF );
+    g_sVDPDiff = getTestCostDiff(CC_VDP_DIFF);
 
     u32 lAfter =  ((u32)g_uMinsH1 * 10 + g_uMinsL1) * 60 + ((u32)g_uSecondsH1 * 10 + g_uSecondsL1);
     u32 lBefore = ((u32)g_uMinsH0 * 10 + g_uMinsL0) * 60 + ((u32)g_uSecondsH0 * 10 + g_uSecondsL0);
@@ -832,8 +846,8 @@ void floatToIntWith2Decimals(float f, IntWith2Decimals* pObj)
 {
     f += 0.005;
 
-    float fFrac = f - (u16)f;
-    pObj->nInt  = (u16)f;
+    float fFrac = f - (u32)f;
+    pObj->lInt  = (u32)f;
     pObj->uFrac = (u8)(fFrac * 100);
 }
 
@@ -846,35 +860,18 @@ void printReport(void)
     // First the frame cycle speed
     print(g_szSpeedHdrCols);
 
-    bool bNTSCError = g_afFrmTotalCycles[NTSC] < 500;
-    bool bPALError = g_afFrmTotalCycles[PAL] < 500;
+    u16 nTotalOverhead = (u16)FRAME_CYCLES_INT + FRAME_CYCLES_INT_KICK_OFF + FRAME_CYCLES_COMMON_START + g_aoTest[0].uStartupCycleCost;
 
-    u16 nTotalOverhead = FRAME_CYCLES_INT + FRAME_CYCLES_INT_KICK_OFF + FRAME_CYCLES_COMMON_START + g_aoTest[0].uStartupCycleCost;
+    u32 lFrmTotalCyclesNTSC;
+    u32 lFrmTotalCyclesPAL;
+    s32 dDiffPAL;
+    s32 dDiffNTSC;
 
-    u32 lFrmTotalCyclesNTSC, lFrmTotalCyclesPAL;
-    s32 dDiffPAL, dDiffNTSC;
+    lFrmTotalCyclesNTSC = (u32)(g_afFrmTotalCycles[NTSC] + 0.5 + nTotalOverhead);
+    dDiffNTSC = (s32)(lFrmTotalCyclesNTSC - anFRAME_CYCLES_TARGET[NTSC]);
 
-    if(bNTSCError)
-    {
-        lFrmTotalCyclesNTSC = 0;
-        dDiffNTSC = anFRAME_CYCLES_TARGET[NTSC];
-    }
-    else
-    {
-        lFrmTotalCyclesNTSC = (u32)(g_afFrmTotalCycles[NTSC] + 0.5 + nTotalOverhead);
-        dDiffNTSC = (s32)(lFrmTotalCyclesNTSC - anFRAME_CYCLES_TARGET[NTSC]);
-    }
-
-    if(bPALError)
-    {
-        lFrmTotalCyclesPAL = 0;
-        dDiffPAL = anFRAME_CYCLES_TARGET[PAL];
-    }
-    else
-    {
-        lFrmTotalCyclesPAL = (u32)(g_afFrmTotalCycles[PAL] + 0.5 + nTotalOverhead);
-        dDiffPAL = (s32)(lFrmTotalCyclesPAL - anFRAME_CYCLES_TARGET[PAL]);
-    }
+    lFrmTotalCyclesPAL = (u32)(g_afFrmTotalCycles[PAL] + 0.5 + nTotalOverhead);
+    dDiffPAL = (s32)(lFrmTotalCyclesPAL - anFRAME_CYCLES_TARGET[PAL]);
 
     sprintf(g_auBuffer,
             g_szSpeedResult,
@@ -895,39 +892,35 @@ void printReport(void)
     print(g_szReportCols);
     for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
     {
-        IntWith2Decimals oAvg60Hz, oAvg50Hz, oTestCost60Hz, oTestCost50Hz;
+        IntWith2Decimals oAvgNTSC, oAvgPAL, oTestCostNTSC, oTestCostPAL;
 
-        floatToIntWith2Decimals(g_afFrameInstrResultAvg[NTSC][t], &oAvg60Hz);
-        floatToIntWith2Decimals(g_afFrameInstrResultAvg[PAL][t], &oAvg50Hz);
-        floatToIntWith2Decimals(g_afFinalTestCost[NTSC][t], &oTestCost60Hz);
-        floatToIntWith2Decimals(g_afFinalTestCost[PAL][t], &oTestCost50Hz);
+        floatToIntWith2Decimals(g_afFrameInstrResultAvg[NTSC][t], &oAvgNTSC);
+        floatToIntWith2Decimals(g_afFrameInstrResultAvg[PAL][t], &oAvgPAL);
+        floatToIntWith2Decimals(g_afFinalTestCost[NTSC][t], &oTestCostNTSC);
+        floatToIntWith2Decimals(g_afFinalTestCost[PAL][t], &oTestCostPAL);
 
-        s8 sDiff60Hz = signedRoundX(g_afFinalTestCost[NTSC][t] - g_aoTest[t].uRealSingleCost);
-        s8 sDiff50Hz = signedRoundX(g_afFinalTestCost[PAL][t] - g_aoTest[t].uRealSingleCost);
+        s8 sDiffNTSC = signedRoundX(g_afFinalTestCost[NTSC][t] - g_aoTest[t].uRealSingleCost);
+        s8 sDiffPAL = signedRoundX(g_afFinalTestCost[PAL][t] - g_aoTest[t].uRealSingleCost);
 
         sprintf(g_auBuffer,
                 g_szReportValues,
                 g_aoTest[t].szTestName,
-                g_aszFreq[NTSC],
-                oAvg60Hz.nInt,
-                oAvg60Hz.uFrac,
-                g_anFrameInstrResultMin[NTSC][t],
-                g_anFrameInstrResultMax[NTSC][t],
-                oTestCost60Hz.nInt,
-                oTestCost60Hz.uFrac,
-                abs(sDiff60Hz)<10?" ":"",  // couldn't find a way to combine %+d and %2d
-                sDiff60Hz,
+                oAvgNTSC.lInt,
+                oAvgNTSC.uFrac,
+                g_alFrameInstrResultMin[NTSC][t],
+                g_alFrameInstrResultMax[NTSC][t],
+                oTestCostNTSC.lInt,
+                oTestCostNTSC.uFrac,
+                sDiffNTSC,
 
-                g_aszFreq[PAL],
-                oAvg50Hz.nInt,
-                oAvg50Hz.uFrac,
-                g_anFrameInstrResultMin[PAL][t],
-                g_anFrameInstrResultMax[PAL][t],
-                oTestCost50Hz.nInt,
-                oTestCost50Hz.uFrac,
-                abs(sDiff60Hz)<10?" ":"",  // couldn't find a way to combine %+d and %2d
-                sDiff50Hz
-                );
+                oAvgPAL.lInt,
+                oAvgPAL.uFrac,
+                g_alFrameInstrResultMin[PAL][t],
+                g_alFrameInstrResultMax[PAL][t],
+                oTestCostPAL.lInt,
+                oTestCostPAL.uFrac,
+                sDiffPAL
+               );
 
         print(g_auBuffer);
     }
@@ -936,8 +929,7 @@ void printReport(void)
 
     u8* szOkOrNot;
 
-    if((abs16(dDiffNTSC) > FRM_DIFF_THRESHOLD) || (abs16(dDiffPAL) > FRM_DIFF_THRESHOLD))
-    // if((abs16(dDiffNTSC) > FRM_DIFF_THRESHOLD) || (abs16(dDiffPAL) > FRM_DIFF_THRESHOLD) | bNTSCError | bPALError)
+    if((abs32(dDiffNTSC) > FRM_DIFF_THRESHOLD) || (abs32(dDiffPAL) > FRM_DIFF_THRESHOLD))
         szOkOrNot = (u8*)"NOT OK";
     else
         szOkOrNot = (u8*)"OK";
@@ -970,8 +962,8 @@ void initRomIfAnyNI(void)
 
     // Put Upper-segment (ISR++) in page 2 and copy contents to 0xC000
     memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2ROM);
-    ENABLE_SEGMENT_PAGE2( UPPER_SEG_ID );
-    memcpy( (void*)0xC000, (void*)0x8000, (u8*)&UPPERCODE_END - (u8*)&UPPERCODE_BEGIN );
+    ENABLE_SEGMENT_PAGE2(UPPER_SEG_ID);
+    memcpy((void*)0xC000, (void*)0x8000, (u8*)&UPPERCODE_END - (u8*)&UPPERCODE_BEGIN);
     memAPI_enaSltPg2_NI_fromC(g_uSlotidPage2RAM); // need RAM here to copy in data
 
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0RAM);
@@ -979,6 +971,31 @@ void initRomIfAnyNI(void)
     memAPI_enaSltPg0_NI_fromC(g_uSlotidPage0BIOS);
 
 #endif
+}
+
+// ---------------------------------------------------------------------------
+enum cpu_variant detectActiveCPU(void)
+{
+    enum cpu_variant eCPU = Z80_PLAIN;
+    u8 uType = getMSXType();
+
+    if(uType == 2) // MSX2+
+    {
+        if(hasTurboFeature())
+            if(isTurboEnabled())
+                eCPU = Z80_TURBO;
+    }
+    else if(uType == 3) // MSX turbo R
+    {
+        u8 uCPU = getCPU(); // 0=Z80 (ROM) mode, 1=R800 ROM  mode, 2=R800 DRAM mode
+
+        if(uCPU == 1)  // 
+            eCPU = R800_ROM;
+        else if(uCPU == 2)
+            eCPU = R800_DRAM;
+    }
+
+    return eCPU;
 }
 
 // ---------------------------------------------------------------------------
@@ -994,13 +1011,15 @@ u8 main(void)
     }
     
 
-    if(hasTurboFeature()) // Coded for testing turbo
-    {
-        if(!isTurboEnabled())
-            enableTurbo(true);
-    }
+                    // Testing code for provoking various speeds
+                    enableR800FullSpeedIfAvailable(true);
 
-    sprintf(g_auBuffer, g_szGreeting, NUM_ITERATIONS, g_szMedium);
+                    // // Testing code for provoking various speeds
+                    // enableTurboIfAvailable(true);
+
+    g_eCPUMode = detectActiveCPU();
+
+    sprintf(g_auBuffer, g_szGreeting, NUM_ITERATIONS, g_szMedium, g_aszCPUModes[ g_eCPUMode ]);
     print(g_auBuffer);
 
     print(g_szWait);
@@ -1010,10 +1029,14 @@ u8 main(void)
     calcStatistics();
     // changeMode(0);
     printReport();
+    // print("testline1\r\n");
+    // print("testline2");
 
 #ifdef ROM_OUTPUT_FILE
 spin_forever: goto spin_forever;
 #endif
+
+    break();
 
     return 0;
 }
