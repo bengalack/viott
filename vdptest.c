@@ -61,7 +61,7 @@
 
 // Typedefs & defines --------------------------------------------------------
 //
-#define NUM_ITERATIONS      4      // Can`t see that many are needed, 16 seems ok
+#define NUM_ITERATIONS      4       // Can`t see that many are needed, 16 seems ok
 #define TEST_SEG_OFFSET     2	    // Test segments starts here. Only used in ROM code
 #define CALIBRATION_TESTS   2	    // We use these for finding the overall available cycles in a frame
 #define FRM_DIFF_THRESHOLD  7	    // If diff is bigger, state NOT OK (guessing on this value!)
@@ -354,14 +354,18 @@ const u8* const         g_aszCPUModes[]      = {"z80 @ 3.5MHz","z80 @ 5.7MHz (tu
 
 
 const u8                g_szErrorMSX[]      = "MSX2 and above is required";
-const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.4 - %d repeats, %s, CPU: %s\r\n"; 
+const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.35 - %d repeats, %s, CPU: %s\r\n"; 
 const u8                g_szWait[]          = "...please wait 30 seconds or so...";
 const u8                g_szRemoveWait[]    = "\r                                  \r\n";
 const u8                g_szReportCols[]    = "               avg   min   max  cost  ~d |      avg   min   max  cost  ~d\r\n";
 const u8                g_szReportValues[]  = "%9s %5ld.%02d %5ld %5ld %2ld.%02d %+3d | %5ld.%02d %5ld %5ld %2ld.%02d %+3d\r\n";
 
-const u8                g_szSpeedHdrCols[]  = "          Hz computer  norm  delta (~d)  | Hz computer  norm  delta (~d)\r\n";
-const u8                g_szSpeedResult[]   = "Frmcycles %s %8ld %5ld %+11ld  | %s %8ld %5ld %+11ld\r\n";
+// const u8                g_szSpeedHdrCols[]  = "          Hz computer  norm  delta (~d)  | Hz computer  norm  delta (~d)\r\n";
+// const u8                g_szSpeedResult[]   = "Frmcycles %s %8ld %5ld %+11ld  | %s %8ld %5ld %+11ld\r\n";
+const u8                g_szSpeedHdrCols[]  = "           ---------- 60 Hz NTSC --------|-------- 50 Hz PAL -----------\r\n";
+const u8                g_szSplitline[]     = "                                         |\r\n";
+const u8                g_szSpeedResult[]   = "Framecycles: %27s | %s\r\n";
+const u8                g_szSRPart[]        = "%lu vs %lu, d:%+ld";
 
 const u8                g_szSummary[]       = "[SUMMARY]  Cycles:%s  VDP_I/O:%+d,%+d%s\r\n";
 const u8                g_szSummaryROM[]    = "  ROM:%+d  ROM_I/O:%+d  ROM_REF:%+d";
@@ -388,7 +392,7 @@ u8                      g_auBuffer[120];    // temp/general buffer here to avoid
 
 volatile u8*            g_pPCReg;           // pointer to PC-reg when the interrupt was triggered
 volatile bool           g_bStorePCReg;
-volatile bool           g_uRomExtraRounds;  // test is "too" fast, one full segment is processed multiple times
+volatile u8             g_uRomExtraRounds;  // test is "too" fast, one full segment is processed multiple times
 function*               g_pFncCurStartupBlock;
 
                         // RESULTS BELOW. As R800 can have instructions of 1 cycle only, we can get iterations with > u16 in PAL
@@ -417,6 +421,18 @@ u8                      g_uMinsH1;
 
 // u16                     g_nMax; // variable made global for easier debugging
 // u8 debug1, debug2;
+volatile u16 nLength;
+volatile u32 lInstructions;
+volatile u16 nTestBlocksInSegment;
+volatile u32 lBlockCost;
+volatile u32 lTailcost;
+volatile u8 uUnrollInstrSize;
+volatile u8 uUnrollSingleInstrSize;
+
+volatile u8 g_uTest;
+volatile u8 g_uIterationNum;
+volatile u8 g_eFreq;
+volatile u8 g_uRomExtraRounds2;
 
 // --------------------------------------------------------------------------
 // Specials in case of ROM outfile
@@ -547,6 +563,18 @@ void restoreOriginalISR(void)
 }
 
 // ---------------------------------------------------------------------------
+// If line is greater than 80 chars, cut at 80 (to avoid 80 char strings with
+// "\r\n" at the end (after pos 80), inserting an unwanted line). Does only work on RAM strings ofc
+void printX(u8* sz)
+{
+    u8 l = strlen(sz);
+    if((l >= 80) && (*(sz + 79) >= ' ') )
+        *(sz + 80) = 0;
+
+    print(sz);
+}
+
+// ---------------------------------------------------------------------------
 void enableR800FullSpeedIfAvailable(bool bEnable)
 {
     if(getMSXType() == 3) // MSX turbo R
@@ -664,19 +692,34 @@ void runIteration(enum freq_variant eFreq, u8 uTest, u8 uIterationNum)
 
     // break();
 
+
     commonStartForAllTests();
 
-    u16 nLength = (u16)g_pPCReg - (u16)&runTestAsmInMem;
-    u32 lInstructions = nLength/g_aoTest[uTest].uUnrollSingleInstructionSize;
+    /* u16 */ nLength = (u16)g_pPCReg - (u16)&runTestAsmInMem;
+    /* u32 */ lInstructions = nLength/g_aoTest[uTest].uUnrollSingleInstructionSize;
 
+    uUnrollSingleInstrSize = g_aoTest[uTest].uUnrollSingleInstructionSize;
+    uUnrollInstrSize = g_aoTest[uTest].uUnrollInstructionsSize;
+    nTestBlocksInSegment = 0;
+    lBlockCost = 0;
+    lTailcost = 0;
+    g_uRomExtraRounds2 = g_uRomExtraRounds;
     if(g_uRomExtraRounds!=0)
     {
-        u16 nTestBlocksInSegment = (u16)((u32)(0x4000 - SIZE_TAIL_BLOCK) / g_aoTest[uTest].uUnrollInstructionsSize);
-        u8 uDivider = g_aoTest[uTest].uUnrollInstructionsSize / g_aoTest[uTest].uUnrollSingleInstructionSize;
-        lInstructions += (u32)nTestBlocksInSegment * g_uRomExtraRounds / uDivider;
+        /* u16 */ nTestBlocksInSegment = (u16)((u32)(0x4000 - SIZE_TAIL_BLOCK) / uUnrollSingleInstrSize);
+        /* u32 */ lBlockCost = (u32)nTestBlocksInSegment * g_uRomExtraRounds;
+        /* u32 */ lTailcost = FRAME_CYCLES_TAIL_Z80 / g_aoTest[uTest].uRealSingleCost;
 
-        lInstructions += FRAME_CYCLES_TAIL_Z80 / g_aoTest[uTest].uRealSingleCost; // make dependent on CPU!
+        lInstructions += lBlockCost;
+        lInstructions += lTailcost; // make dependent on CPU!
     }
+
+    g_uTest = uTest;
+    g_uIterationNum = uIterationNum;
+    g_eFreq = eFreq;
+
+
+    // break();
 
     g_alFrameInstrResult[eFreq][uTest][uIterationNum] = lInstructions;
 }
@@ -727,15 +770,13 @@ void runAllIterations(void)
         setPALRefreshRate((bool)f);
         halt();                 // halt here is needed on AX-370, otherwise we get skewed results
 
-        // break();
-
         for(u8 t = 0; t < arraysize(g_aoTest); t++)
         {
-                                                                // // test!
-                                                                // if(t == 11)
-                                                                //     enableTurboIfAvailable(true);
-                                                                // else if(t == 12)
-                                                                //     enableTurboIfAvailable(false);
+                                                                // test!
+                                                                if(t == 11)
+                                                                    enableTurboIfAvailable(true);
+                                                                else if(t == 12)
+                                                                    enableTurboIfAvailable(false);
 
             setupTestInMemory(t);
 
@@ -744,9 +785,7 @@ void runAllIterations(void)
         }
     }
 
-    break();
-
-    runLongTest();
+    // runLongTest();
 
     setPALRefreshRate(bPALOrg);
 
@@ -855,10 +894,10 @@ void floatToIntWith2Decimals(float f, IntWith2Decimals* pObj)
 //
 void printReport(void)
 {
-    print(g_szRemoveWait);
+    printX(g_szRemoveWait);
 
     // First the frame cycle speed
-    print(g_szSpeedHdrCols);
+    printX(g_szSpeedHdrCols);
 
     u16 nTotalOverhead = (u16)FRAME_CYCLES_INT + FRAME_CYCLES_INT_KICK_OFF + FRAME_CYCLES_COMMON_START + g_aoTest[0].uStartupCycleCost;
 
@@ -873,20 +912,30 @@ void printReport(void)
     lFrmTotalCyclesPAL = (u32)(g_afFrmTotalCycles[PAL] + 0.5 + nTotalOverhead);
     dDiffPAL = (s32)(lFrmTotalCyclesPAL - anFRAME_CYCLES_TARGET[PAL]);
 
-    sprintf(g_auBuffer,
-            g_szSpeedResult,
-            g_aszFreq[NTSC],
+    u8 szBuf1[50];
+    u8 szBuf2[50];
+
+    sprintf(szBuf1,
+            g_szSRPart,
             lFrmTotalCyclesNTSC,
             anFRAME_CYCLES_TARGET[NTSC],
-            dDiffNTSC,
-            g_aszFreq[PAL],
+            dDiffNTSC);
+
+    sprintf(szBuf2,
+            g_szSRPart,
             lFrmTotalCyclesPAL,
             anFRAME_CYCLES_TARGET[PAL],
-            dDiffPAL
+            dDiffPAL);
+
+
+    sprintf(g_auBuffer,
+            g_szSpeedResult,
+            szBuf1,
+            szBuf2
            );
 
-    print(g_auBuffer);
-    print(g_szNewline);
+    printX(g_auBuffer);
+    print(g_szSplitline);
 
     // Then the tests
     print(g_szReportCols);
@@ -922,7 +971,7 @@ void printReport(void)
                 sDiffPAL
                );
 
-        print(g_auBuffer);
+        printX(g_auBuffer);
     }
 
     print(g_szNewline);
@@ -945,7 +994,7 @@ void printReport(void)
 #endif
 
     sprintf(g_auBuffer, g_szSummary, szOkOrNot, g_sVDPDiff, g_sVDPDiff2, szRom);
-    print(g_auBuffer);
+    // printX(g_auBuffer);
 }
 
 // ---------------------------------------------------------------------------
@@ -1009,10 +1058,23 @@ u8 main(void)
         print(g_szErrorMSX);
         return 1;
     }
-    
 
-                    // Testing code for provoking various speeds
-                    enableR800FullSpeedIfAvailable(true);
+    // safeguard against R800 until we support it properly
+    s8 sOrgCPU = -1;
+    if(getMSXType() == 3) // MSX turbo R
+    {
+        u8 uCPU = getCPU();
+        if(uCPU != 0)
+        {
+            sOrgCPU = (s8)uCPU;
+            changeCPU(0); // 0=Z80 (ROM) mode, 1=R800 ROM  mode, 2=R800 DRAM mode
+        }
+    }
+
+
+
+                    // // Testing code for provoking various speeds
+                    // enableR800FullSpeedIfAvailable(true);
 
                     // // Testing code for provoking various speeds
                     // enableTurboIfAvailable(true);
@@ -1020,7 +1082,7 @@ u8 main(void)
     g_eCPUMode = detectActiveCPU();
 
     sprintf(g_auBuffer, g_szGreeting, NUM_ITERATIONS, g_szMedium, g_aszCPUModes[ g_eCPUMode ]);
-    print(g_auBuffer);
+    printX(g_auBuffer);
 
     print(g_szWait);
 
@@ -1036,7 +1098,8 @@ u8 main(void)
 spin_forever: goto spin_forever;
 #endif
 
-    break();
+    if(sOrgCPU != -1)
+        changeCPU(sOrgCPU);
 
     return 0;
 }
