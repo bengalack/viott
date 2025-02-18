@@ -772,11 +772,11 @@ void runAllIterations(void)
 
         for(u8 t = 0; t < arraysize(g_aoTest); t++)
         {
-                                                                // test!
-                                                                if(t == 11)
-                                                                    enableTurboIfAvailable(true);
-                                                                else if(t == 12)
-                                                                    enableTurboIfAvailable(false);
+                                                                // // test!
+                                                                // if(t == 11)
+                                                                //     enableTurboIfAvailable(true);
+                                                                // else if(t == 12)
+                                                                //     enableTurboIfAvailable(false);
 
             setupTestInMemory(t);
 
