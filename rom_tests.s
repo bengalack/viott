@@ -22,27 +22,39 @@ _runTestAsmInMem::  ; this address/symbol is reused in every segment in page 2
 .endm
     macroTEST_TAIL  ; this one has length 7 bytes (SIZE_TAIL_BLOCK)
 
-    .area _SEG3 ; in98x --------------------------
-.rept (0x4000-7)/2   ; divide by the bytesize of the unroll
-    macroTEST_4_UNROLL
+    ; .area _SEG3 ; in98x --------------------------
+; .rept (0x4000-7)/2   ; divide by the bytesize of the unroll
+    ; macroTEST_4_UNROLL
+    .area _SEG3 ; !adc(hl) --------------------------
+.rept (0x4000-7)/1   ; divide by the bytesize of the unroll
+    macroTEST_4_2_UNROLL
 .endm
     macroTEST_TAIL  ; this one has length 7 bytes (SIZE_TAIL_BLOCK)
 
-    .area _SEG4 ; in99 ---------------------------
-.rept (0x4000-7)/2  ; divide by the bytesize of the unroll
-    macroTEST_5_UNROLL
+    ; .area _SEG4 ; in99 ---------------------------
+; .rept (0x4000-7)/2  ; divide by the bytesize of the unroll
+;     macroTEST_5_UNROLL
+    .area _SEG4 ; !adca,iy0 ---------------------------
+.rept (0x4000-7)/3  ; divide by the bytesize of the unroll
+    macroTEST_5_2_UNROLL
 .endm
     macroTEST_TAIL  ; this one has length 7 bytes (SIZE_TAIL_BLOCK)
 
-    .area _SEG5 ; out9A --------------------------
-.rept (0x4000-7)/2  ; divide by the bytesize of the unroll
-    macroTEST_6_UNROLL
+;     .area _SEG5 ; out9A --------------------------
+; .rept (0x4000-7)/2  ; divide by the bytesize of the unroll
+;     macroTEST_6_UNROLL
+    .area _SEG5 ; !bit0,iy0 --------------------------
+.rept (0x4000-7)/4  ; divide by the bytesize of the unroll
+    macroTEST_6_2_UNROLL
 .endm
     macroTEST_TAIL  ; this one has length 7 bytes (SIZE_TAIL_BLOCK)
 
-    .area _SEG6 ; out9B --------------------------
+;     .area _SEG6 ; out9B --------------------------
+; .rept (0x4000-7)/2  ; divide by the bytesize of the unroll
+;     macroTEST_7_UNROLL
+    .area _SEG6 ; cpn --------------------------
 .rept (0x4000-7)/2  ; divide by the bytesize of the unroll
-    macroTEST_7_UNROLL
+    macroTEST_7_2_UNROLL
 .endm
     macroTEST_TAIL  ; this one has length 7 bytes (SIZE_TAIL_BLOCK)
 

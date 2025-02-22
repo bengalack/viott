@@ -61,12 +61,17 @@
 
 // Typedefs & defines --------------------------------------------------------
 //
+#define DEBUG_FORCE_R800_FULLSPEED_IF AVAILABLE 0 // Testing code for provoking various speeds
+#define DEBUG_FORCE_TURBO_IF_AVAILABLE 0
+#define DEBUG_INSERT_TURBO_MID_TEST 0
+
 #define NUM_ITERATIONS      4       // Can`t see that many are needed, 16 seems ok
 #define TEST_SEG_OFFSET     2	    // Test segments starts here. Only used in ROM code
 #define CALIBRATION_TESTS   2	    // We use these for finding the overall available cycles in a frame
 #define FRM_DIFF_THRESHOLD  7	    // If diff is bigger, state NOT OK (guessing on this value!)
 #define SIZE_TAIL_BLOCK     7	    // bytes
 #define SIZE_LONGTEST_TAIL  7	    // bytes
+#define FRAME_COUNT_ADD_UP  0.333f  // a heuristic/assumption to get closer to the exact value
 
 typedef signed char         s8;
 typedef unsigned char       u8;
@@ -82,17 +87,17 @@ typedef const void          (function)(void);
 #define break()				{__asm in a,(0x2e) __endasm;} // for debugging. may be risky to use as it trashes A
 #define arraysize(arr)      (sizeof(arr)/sizeof((arr)[0]))
 
-enum cpu_variant {Z80_PLAIN, Z80_TURBO, R800_ROM, R800_DRAM};
+enum cpu_variant {Z80_PLAIN, Z80_TURBO, R800_ROM, R800_DRAM, NUM_CPU_VARIANTS};
 enum three_way {NO, YES, NA};
 enum freq_variant {NTSC, PAL, FREQ_COUNT};
-enum calc_bitmask {CC_NONE        = 0,
-                   CC_VDP_DIFF    = 0b1,
-                   CC_ROM_DIFF_A  = 0b10,
-                   CC_ROM_DIFF_B  = 0b100,              // ROM I/O
-                   CC_ROM2_DIFF_A = 0b1000,
-                   CC_ROM2_DIFF_B = 0b10000,            // ROM fundamental
-                   CC_ROM3_DIFF_A = 0b100000,
-                   CC_ROM3_DIFF_B = 0b1000000};         // ROM references (like "ld a,(hl)")
+// enum calc_bitmask {CC_NONE        = 0,
+//                    CC_VDP_DIFF    = 0b1,
+//                    CC_ROM_DIFF_A  = 0b10,
+//                    CC_ROM_DIFF_B  = 0b100,              // ROM I/O
+//                    CC_ROM2_DIFF_A = 0b1000,
+//                    CC_ROM2_DIFF_B = 0b10000,            // ROM fundamental
+//                    CC_ROM3_DIFF_A = 0b100000,
+//                    CC_ROM3_DIFF_B = 0b1000000};         // ROM references (like "ld a,(hl)")
 
 typedef struct {
     u8*                     szTestName;                 // max 9 characters
@@ -104,7 +109,7 @@ typedef struct {
     u8                      uStartupCycleCost;          // init of regs or so, at start of frame, before repeats
     u8                      uRealSingleCost;            // the cost of the unroll instruction(s) if run once
     bool                    bForceRAMRun;
-    enum calc_bitmask       eCalcCandidate;
+    // enum calc_bitmask       eCalcCandidate;
     u8                      uSegNum;                    // used only in ROM mode. 0xFF: not in use
 } TestDescriptor;
 
@@ -137,6 +142,8 @@ void runTestAsmInMem(void);
 void commonStartForAllTests(void);
 void longTest(void);
 
+u8   readClock(u8 uBlock0RegID);
+
 // Consts / ROM friendly -----------------------------------------------------
 //
 const TestDescriptor    g_aoTest[] = {
@@ -150,7 +157,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             5,                  // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun; - first run is ALWAYS in RAM
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                            // CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             0xFF                // u8               uSegNum;
                                         },
                                         {
@@ -163,7 +170,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             7,                  // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun; - second run is ALWAYS in RAM
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                            // CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             0xFF                // u8               uSegNum;
                                         },
                                         {
@@ -176,7 +183,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                            // CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+0   // u8               uSegNum;
                                         },
                                         {
@@ -189,63 +196,125 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                            // CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+1   // u8               uSegNum;
                                         },
+
+                                        // {
+                                        //     "in98x",            // u8*              szTestName;
+                                        //     TEST_EMPTY,         // function*        pFncStartupBlock;
+                                        //     TEST_4_UNROLL,      // void             pFncUnrollInstruction;
+                                        //     2,                  // u8               uUnrollInstructionsSize;
+                                        //     2,                  // u8               uUnrollSingleInstructionSize;
+                                        //     NO,                 // enum three_way   eReadVRAM;
+                                        //     11,                 // u8               uStartupCycleCost;
+                                        //     12,                 // u8               uRealSingleCost;
+                                        //     false,              // bool             bForceRAMRun;
+                                        //     CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                        //     TEST_SEG_OFFSET+2   // u8               uSegNum;
+                                        // },
+
+                                            {
+                                                "!inc(hl)",         // u8*              szTestName;
+                                                TEST_4_2_STARTUP,   // function*        pFncStartupBlock;
+                                                TEST_4_2_UNROLL,    // void             pFncUnrollInstruction;
+                                                1,                  // u8               uUnrollInstructionsSize;
+                                                1,                  // u8               uUnrollSingleInstructionSize;
+                                                NA,                 // enum three_way   eReadVRAM;
+                                                22,                 // u8               uStartupCycleCost;
+                                                12,                 // u8               uRealSingleCost;
+                                                false,              // bool             bForceRAMRun;
+                                                // CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                                TEST_SEG_OFFSET+2   // u8               uSegNum;
+                                            },
+
+                                        // {
+                                        //     "in99",             // u8*              szTestName;
+                                        //     TEST_5_STARTUP,     // function*        pFncStartupBlock;
+                                        //     TEST_5_UNROLL,      // void             pFncUnrollInstruction;
+                                        //     2,                  // u8               uUnrollInstructionsSize;
+                                        //     2,                  // u8               uUnrollSingleInstructionSize;
+                                        //     NA,                 // enum three_way   eReadVRAM;
+                                        //     51,                 // u8               uStartupCycleCost;
+                                        //     12,                 // u8               uRealSingleCost;
+                                        //     false,              // bool             bForceRAMRun;
+                                        //     CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                        //     TEST_SEG_OFFSET+3   // u8               uSegNum;
+                                        // },
+
+                                            {
+                                                "!adca,iy0",        // u8*              szTestName;
+                                                TEST_EMPTY,         // function*        pFncStartupBlock;
+                                                TEST_5_2_UNROLL,    // void             pFncUnrollInstruction;
+                                                3,                  // u8               uUnrollInstructionsSize;
+                                                3,                  // u8               uUnrollSingleInstructionSize;
+                                                NA,                 // enum three_way   eReadVRAM;
+                                                11,                 // u8               uStartupCycleCost;
+                                                21,                 // u8               uRealSingleCost;
+                                                false,              // bool             bForceRAMRun;
+                                                // CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                                TEST_SEG_OFFSET+3   // u8               uSegNum;
+                                            },
+
+
+                                        // {   // Palette test, must init first and restore palette after
+                                        //     "out9A",            // u8*              szTestName;
+                                        //     TEST_EMPTY,         // function*        pFncStartupBlock;
+                                        //     TEST_6_UNROLL,      // void             pFncUnrollInstruction;
+                                        //     2,                  // u8               uUnrollInstructionsSize;
+                                        //     2,                  // u8               uUnrollSingleInstructionSize;
+                                        //     NA,                 // enum three_way   eReadVRAM;
+                                        //     11,                 // u8               uStartupCycleCost;
+                                        //     12,                 // u8               uRealSingleCost;
+                                        //     false,              // bool             bForceRAMRun;
+                                        //     CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                        //     TEST_SEG_OFFSET+4   // u8               uSegNum;
+                                        // },
+
                                         {
-                                            "in98x",            // u8*              szTestName;
+                                            "!bit0,iy0",        // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            TEST_4_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionsSize;
-                                            2,                  // u8               uUnrollSingleInstructionSize;
-                                            NO,                 // enum three_way   eReadVRAM;
-                                            11,                 // u8               uStartupCycleCost;
-                                            12,                 // u8               uRealSingleCost;
-                                            false,              // bool             bForceRAMRun;
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
-                                            TEST_SEG_OFFSET+2   // u8               uSegNum;
-                                        },
-                                        {
-                                            "in99",             // u8*              szTestName;
-                                            TEST_5_STARTUP,     // function*        pFncStartupBlock;
-                                            TEST_5_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionsSize;
-                                            2,                  // u8               uUnrollSingleInstructionSize;
-                                            NA,                 // enum three_way   eReadVRAM;
-                                            51,                 // u8               uStartupCycleCost;
-                                            12,                 // u8               uRealSingleCost;
-                                            false,              // bool             bForceRAMRun;
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
-                                            TEST_SEG_OFFSET+3   // u8               uSegNum;
-                                        },
-                                        {   // Palette test, must init first and restore palette after
-                                            "out9A",            // u8*              szTestName;
-                                            TEST_EMPTY,         // function*        pFncStartupBlock;
-                                            TEST_6_UNROLL,      // void             pFncUnrollInstruction;
-                                            2,                  // u8               uUnrollInstructionsSize;
-                                            2,                  // u8               uUnrollSingleInstructionSize;
+                                            TEST_6_2_UNROLL,    // void             pFncUnrollInstruction;
+                                            4,                  // u8               uUnrollInstructionsSize;
+                                            4,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
                                             11,                 // u8               uStartupCycleCost;
-                                            12,                 // u8               uRealSingleCost;
+                                            22,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                            // CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+4   // u8               uSegNum;
                                         },
-                                        {   // Stream port test
-                                            "out9B",            // u8*              szTestName;
-                                            TEST_7_STARTUP,     // function*        pFncStartupBlock;
-                                            TEST_7_UNROLL,      // void             pFncUnrollInstruction;
+
+                                        // {   // Stream port test
+                                        //     "out9B",            // u8*              szTestName;
+                                        //     TEST_7_STARTUP,     // function*        pFncStartupBlock;
+                                        //     TEST_7_UNROLL,      // void             pFncUnrollInstruction;
+                                        //     2,                  // u8               uUnrollInstructionsSize;
+                                        //     2,                  // u8               uUnrollSingleInstructionSize;
+                                        //     NA,                 // enum three_way   eReadVRAM;
+                                        //     51,                 // u8               uStartupCycleCost;
+                                        //     12,                 // u8               uRealSingleCost;
+                                        //     false,              // bool             bForceRAMRun;
+                                        //     CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                        //     TEST_SEG_OFFSET+5   // u8               uSegNum;
+                                        // },
+
+                                        {
+                                            "!cpn",             // u8*              szTestName;
+                                            TEST_EMPTY,         // function*        pFncStartupBlock;
+                                            TEST_7_2_UNROLL,    // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
-                                            51,                 // u8               uStartupCycleCost;
-                                            12,                 // u8               uRealSingleCost;
+                                            11,                 // u8               uStartupCycleCost;
+                                            8,                  // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                            // CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+5   // u8               uSegNum;
                                         },
+
                                         {
-                                            "outi98FMT",        // u8*              szTestName;
+                                            "outi98",           // u8*              szTestName;
                                             TEST_8_STARTUP,     // function*        pFncStartupBlock;
                                             TEST_8_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
@@ -254,7 +323,7 @@ const TestDescriptor    g_aoTest[] = {
                                             30,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_NONE,            // enum calc_bitmask eCalcCandidate;
+                                            // CC_NONE,            // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+6   // u8               uSegNum;
                                         },
                                         {   // Using same tests as above
@@ -267,11 +336,11 @@ const TestDescriptor    g_aoTest[] = {
                                             30,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun;
-                                            CC_VDP_DIFF,        // enum calc_bitmask eCalcCandidate;
+                                            // CC_VDP_DIFF,        // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+6   // u8               uSegNum;
                                         },
                                         {   // Just pick a non-used port (I hope), and check the speed
-                                            "!in06FMT",         // u8*              szTestName;
+                                            "!in06",            // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             TEST_9_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
@@ -280,7 +349,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_ROM_DIFF_B,      // enum calc_bitmask eCalcCandidate;
+                                            // CC_ROM_DIFF_B,      // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+7   // u8               uSegNum;
                                         },
                                         {   // Just pick a non-used port (I hope), and check the speed
@@ -293,11 +362,11 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             12,                 // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun;
-                                            CC_ROM_DIFF_A,      // enum calc_bitmask eCalcCandidate;
+                                            // CC_ROM_DIFF_A,      // enum calc_bitmask eCalcCandidate;
                                             0xFF                // u8               uSegNum;
                                         },
                                         {   
-                                            "!incaFMT",         // u8*              szTestName;
+                                            "!inca",            // u8*              szTestName;
                                             TEST_EMPTY,         // function*        pFncStartupBlock;
                                             TEST_A_UNROLL,      // void             pFncUnrollInstruction;
                                             1,                  // u8               uUnrollInstructionsSize;
@@ -306,7 +375,7 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             5,                  // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_ROM2_DIFF_B,     // enum calc_bitmask eCalcCandidate;
+                                            // CC_ROM2_DIFF_B,     // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+8   // u8               uSegNum;
                                         },
                                         {   
@@ -319,20 +388,20 @@ const TestDescriptor    g_aoTest[] = {
                                             11,                 // u8               uStartupCycleCost;
                                             5,                  // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun;
-                                            CC_ROM2_DIFF_A,     // enum calc_bitmask eCalcCandidate;
+                                            // CC_ROM2_DIFF_A,     // enum calc_bitmask eCalcCandidate;
                                             0xFF                // u8               uSegNum;
                                         },
                                         {   
-                                            "!cpiFMT",          // u8*              szTestName;
+                                            "!cpi",             // u8*              szTestName;
                                             TEST_B_STARTUP,     // function*        pFncStartupBlock;
                                             TEST_B_UNROLL,      // void             pFncUnrollInstruction;
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
-                                            22,                 // u8               uStartupCycleCost;
+                                            32,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             false,              // bool             bForceRAMRun;
-                                            CC_ROM3_DIFF_B,     // enum calc_bitmask eCalcCandidate;
+                                            // CC_ROM3_DIFF_B,     // enum calc_bitmask eCalcCandidate;
                                             TEST_SEG_OFFSET+9   // u8               uSegNum;
                                         },
                                         {   
@@ -342,10 +411,10 @@ const TestDescriptor    g_aoTest[] = {
                                             2,                  // u8               uUnrollInstructionsSize;
                                             2,                  // u8               uUnrollSingleInstructionSize;
                                             NA,                 // enum three_way   eReadVRAM;
-                                            22,                 // u8               uStartupCycleCost;
+                                            32,                 // u8               uStartupCycleCost;
                                             18,                 // u8               uRealSingleCost;
                                             true,               // bool             bForceRAMRun;
-                                            CC_ROM3_DIFF_A,     // enum calc_bitmask eCalcCandidate;
+                                            // CC_ROM3_DIFF_A,     // enum calc_bitmask eCalcCandidate;
                                             0xFF                // u8               uSegNum;
                                         }
                                      };
@@ -354,33 +423,46 @@ const u8* const         g_aszCPUModes[]      = {"z80 @ 3.5MHz","z80 @ 5.7MHz (tu
 
 
 const u8                g_szErrorMSX[]      = "MSX2 and above is required";
-const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.35 - %d repeats, %s, CPU: %s\r\n"; 
+const u8                g_szGreeting[]      = "VDP I/O Timing Test v1.39 - %d repeats, %s, CPU: %s\r\n"; 
 const u8                g_szWait[]          = "...please wait 30 seconds or so...";
-const u8                g_szRemoveWait[]    = "\r                                  \r\n";
+const u8                g_szRemoveWait[]    = "\r                                  \r";
 const u8                g_szReportCols[]    = "               avg   min   max  cost  ~d |      avg   min   max  cost  ~d\r\n";
 const u8                g_szReportValues[]  = "%9s %5ld.%02d %5ld %5ld %2ld.%02d %+3d | %5ld.%02d %5ld %5ld %2ld.%02d %+3d\r\n";
 
-// const u8                g_szSpeedHdrCols[]  = "          Hz computer  norm  delta (~d)  | Hz computer  norm  delta (~d)\r\n";
-// const u8                g_szSpeedResult[]   = "Frmcycles %s %8ld %5ld %+11ld  | %s %8ld %5ld %+11ld\r\n";
-const u8                g_szSpeedHdrCols[]  = "           ---------- 60 Hz NTSC --------|-------- 50 Hz PAL -----------\r\n";
+const u8                g_szSpeedHdrCols[]  = "          ---------- 60 Hz NTSC ---------|----------- 50 Hz PAL ---------\r\n";
 const u8                g_szSplitline[]     = "                                         |\r\n";
-const u8                g_szSpeedResult[]   = "Framecycles: %27s | %s\r\n";
+const u8                g_szSpeedResult[]   = "Framecycles: %27s | %30s\r\n";
 const u8                g_szSRPart[]        = "%lu vs %lu, d:%+ld";
 
-const u8                g_szSummary[]       = "[SUMMARY]  Cycles:%s  VDP_I/O:%+d,%+d%s\r\n";
-const u8                g_szSummaryROM[]    = "  ROM:%+d  ROM_I/O:%+d  ROM_REF:%+d";
-const u8                g_szSummaryROM2[]   = "  (ROM not tested)";
+const u8                g_szLongTest[]      = " longtest  %s\r\n";
+const u8                g_szLongTestTurbo[] = "(can only run in normal z80 mode)";
+const u8                g_szLongInfo[]      = "VDP I/O added wait: %+d cycle(s)";
+const u8                g_szLongRTCError[]  = "(no result as internal clock is not working)";
+const u8                g_szSummary[]       = "[EVALUATE] We have an issue if ~d is greater than 0 on any of the lines\r\n";
+
+// const u8                g_szSummary[]       = "[SUMMARY]  Cycles:%s  VDP_I/O:%+d,%+d%s\r\n";
+// const u8                g_szSummaryROM[]    = "  ROM:%+d  ROM_I/O:%+d  ROM_REF:%+d";
+// const u8                g_szSummaryROM2[]   = "  (ROM not tested)";
 
 const u8                g_szNewline[]       = "\r\n";
 
 const u8* const         g_aszFreq[]         = {"60", "50"}; // must be chars
 
-const u32               anFRAME_CYCLES_TARGET[]     = {59736, 71364}; // assumed "ideal"
-const u8                FRAME_CYCLES_INT            = 171;
-const u8                FRAME_CYCLES_INT_KICK_OFF   = 14 + 11; // +11 is the JP at 0x0038
-const u8                FRAME_CYCLES_COMMON_START   = 72;   // cycles after halt
+// Normal. Turbo is supposedly 50% faster.
+// PAL (“50 FPS”):  71364 cycles (3579545/50.159), turbo (+50%): 107046 cycles, measured: 106776 (49.62%)
+// NTSC (“60 FPS”): 59736 cycles (3579545/59.923), turbo (+50%):  89604 cycles, measured:  89387 (49.64%)
+// 
+const u32 alFRAME_CYCLES_TARGET[NUM_CPU_VARIANTS][FREQ_COUNT] = {{59736, 71364}, {89387, 106776}, {150000, 200000}, {200000, 300000}}; // assumed "ideal"
 
-const u8                FRAME_CYCLES_TAIL_Z80   = 45;   // cycles after halt
+const u8                FRAME_CYCLES_INT                    = 171;
+const u8                FRAME_CYCLES_INT_TURBO_ADD          = 3 * (32) + 7;
+const u8                FRAME_CYCLES_INT_KICK_OFF           = 14 + 11; // +11 is the JP at 0x0038
+const u8                FRAME_CYCLES_INT_KICK_OFF_TURBO_ADD = 0 + 2;
+const u8                FRAME_CYCLES_COMMON_START           = 72; // cycles after halt
+const u8                FRAME_CYCLES_COMMON_START_TURBO_ADD = 8;
+
+const u8                FRAME_CYCLES_TAIL_Z80               = 42;
+const u8                FRAME_CYCLES_TAIL_Z80_TURBO_ADD     = 3; // maybe more, how do I know??? 
 
 
 // RAM variables -------------------------------------------------------------
@@ -392,23 +474,29 @@ u8                      g_auBuffer[120];    // temp/general buffer here to avoid
 
 volatile u8*            g_pPCReg;           // pointer to PC-reg when the interrupt was triggered
 volatile bool           g_bStorePCReg;
-volatile u8             g_uRomExtraRounds;  // test is "too" fast, one full segment is processed multiple times
+volatile u8             g_uExtraRounds;     // test is "too" fast, one full segment is processed multiple times
 function*               g_pFncCurStartupBlock;
 
                         // RESULTS BELOW. As R800 can have instructions of 1 cycle only, we can get iterations with > u16 in PAL
-float                   g_afFrmTotalCycles     [FREQ_COUNT];
-u32                     g_alFrameInstrResult   [FREQ_COUNT][arraysize(g_aoTest)][NUM_ITERATIONS];
-float                   g_afFrameInstrResultAvg[FREQ_COUNT][arraysize(g_aoTest)];
-u32                     g_alFrameInstrResultMin[FREQ_COUNT][arraysize(g_aoTest)];
-u32                     g_alFrameInstrResultMax[FREQ_COUNT][arraysize(g_aoTest)];
-float                   g_afFinalTestCost      [FREQ_COUNT][arraysize(g_aoTest)];
-s8                      g_sVDPDiff;
+float                   g_afFrmTotalCycles      [FREQ_COUNT];
+float                   g_afFrmTotalCyclesNoTail[FREQ_COUNT];
+u32                     g_alFrameInstrResult    [FREQ_COUNT][arraysize(g_aoTest)][NUM_ITERATIONS];
+float                   g_afFrameInstrResultAvg [FREQ_COUNT][arraysize(g_aoTest)];
+u32                     g_alFrameInstrResultMin [FREQ_COUNT][arraysize(g_aoTest)];
+u32                     g_alFrameInstrResultMax [FREQ_COUNT][arraysize(g_aoTest)];
+u8                      g_auFrameInstrResultXtra[FREQ_COUNT][arraysize(g_aoTest)][NUM_ITERATIONS];
+float                   g_afFrameInstrResultXtra[FREQ_COUNT][arraysize(g_aoTest)];
+u8                      g_auFrameInstrResultXtr2[FREQ_COUNT][arraysize(g_aoTest)];
+float                   g_afFinalTestCost       [FREQ_COUNT][arraysize(g_aoTest)];
+// s8                      g_sVDPDiff;
 s8                      g_sVDPDiff2;
-s8                      g_sROMDiff;
-s8                      g_sROM2Diff;
-s8                      g_sROM3Diff;
+// s8                      g_sROMDiff;
+// s8                      g_sROM2Diff;
+// s8                      g_sROM3Diff;
 
                         // Long test timings via RTC (start:0, end:1)
+bool                    g_bRTCWorking;
+u32                     g_lStartTimeStamp;
 u8                      g_uSecondsL0;
 u8                      g_uSecondsH0;
 u8                      g_uMinsL0;
@@ -418,21 +506,6 @@ u8                      g_uSecondsL1;
 u8                      g_uSecondsH1;
 u8                      g_uMinsL1;
 u8                      g_uMinsH1;
-
-// u16                     g_nMax; // variable made global for easier debugging
-// u8 debug1, debug2;
-volatile u16 nLength;
-volatile u32 lInstructions;
-volatile u16 nTestBlocksInSegment;
-volatile u32 lBlockCost;
-volatile u32 lTailcost;
-volatile u8 uUnrollInstrSize;
-volatile u8 uUnrollSingleInstrSize;
-
-volatile u8 g_uTest;
-volatile u8 g_uIterationNum;
-volatile u8 g_eFreq;
-volatile u8 g_uRomExtraRounds2;
 
 // --------------------------------------------------------------------------
 // Specials in case of ROM outfile
@@ -494,20 +567,35 @@ __asm macroTEST_3_UNROLL __endasm;
 void TEST_4_UNROLL(void) __naked {
 __asm macroTEST_4_UNROLL __endasm;
 }
+void TEST_4_2_STARTUP(void) __naked {
+__asm macroTEST_4_2_STARTUP __endasm;
+}
+void TEST_4_2_UNROLL(void) __naked {
+__asm macroTEST_4_2_UNROLL __endasm;
+}
 void TEST_5_STARTUP(void) __naked {
 __asm macroTEST_5_STARTUP __endasm;
 }
 void TEST_5_UNROLL(void) __naked {
 __asm macroTEST_5_UNROLL __endasm;
 }
+void TEST_5_2_UNROLL(void) __naked {
+__asm macroTEST_5_2_UNROLL __endasm;
+}
 void TEST_6_UNROLL(void) __naked {
 __asm macroTEST_6_UNROLL __endasm;
+}
+void TEST_6_2_UNROLL(void) __naked {
+__asm macroTEST_6_2_UNROLL __endasm;
 }
 void TEST_7_STARTUP(void) __naked {
 __asm macroTEST_7_STARTUP __endasm;
 }
 void TEST_7_UNROLL(void) __naked {
 __asm macroTEST_7_UNROLL __endasm;
+}
+void TEST_7_2_UNROLL(void) __naked {
+__asm macroTEST_7_2_UNROLL __endasm;
 }
 void TEST_8_STARTUP(void) __naked {
 __asm macroTEST_8_STARTUP __endasm;
@@ -533,6 +621,58 @@ __asm macroTEST_LONG_UNROLL __endasm;
 void TEST_LONGTEST_TAIL(void) __naked {
 __asm macroTEST_LONG_TAIL __endasm;
 }
+
+// ---------------------------------------------------------------------------
+//
+u32 getTimeStamp(void)
+{
+    u32 lSL = (u32)readClock(0);
+    u32 lSH = (u32)readClock(1);
+    u32 lML = (u32)readClock(2);
+    u32 lMH = (u32)readClock(3);
+    u32 lHL = (u32)readClock(4);
+    u32 lHH = (u32)readClock(5);
+
+    return (lHH<<5)|(lHL<<4)|(lMH<<3)|(lML<<2)|(lSH<<1)|lSL;
+}
+
+// ---------------------------------------------------------------------------
+// Special rounding. Caters for the 3rd decimal already presented to user
+// rounded up (using +0.005). Just to avoid making it look like a bug.
+//
+s8 signedRoundX(float f)
+{
+    return f<0?(s8)(f-0.5):(s8)(f+0.505);
+}
+
+// // ---------------------------------------------------------------------------
+// //
+// float unsignedRound(float f)
+// {
+//     return (float)((u32)(f+0.5));
+// }
+
+// ---------------------------------------------------------------------------
+//
+u32 abs32(s32 s)
+{
+    return s<0?-s:s;
+}
+
+// ---------------------------------------------------------------------------
+//
+u8 abs(s8 s)
+{
+    return s<0?-s:s;
+}
+
+// ---------------------------------------------------------------------------
+//
+float fmax(float f1, float f2)
+{
+    return f1>f2?f1:f2;
+}
+
         
 // ---------------------------------------------------------------------------
 void setCustomISR(void)
@@ -586,29 +726,6 @@ void enableTurboIfAvailable(bool bEnable)
 {
     if(hasTurboFeature())
         enableTurbo(bEnable);
-}
-
-// ---------------------------------------------------------------------------
-// Special rounding. Caters for the 3rd decimal already presented to user
-// rounded up (using +0.005). Just to avoid making it look like a bug.
-//
-s8 signedRoundX(float f)
-{
-    return f<0?(s8)(f-0.5):(s8)(f+0.505);
-}
-
-// ---------------------------------------------------------------------------
-//
-u32 abs32(s32 s)
-{
-    return s<0?-s:s;
-}
-
-// ---------------------------------------------------------------------------
-//
-u8 abs(s8 s)
-{
-    return s<0?-s:s;
 }
 
 // ---------------------------------------------------------------------------
@@ -685,49 +802,154 @@ void setupTestInMemory(u8 uTest)
 #endif
 }
 
+// // ---------------------------------------------------------------------------
+// s8 getTestCostDiff(enum calc_candidate eBitMask)
+// {
+//     // find the fundamental ROM diff
+//     u8 uNumTests = 0;
+//     float fTestDiffsTotal = 0;
+
+//     for(u8 f = 0; f < FREQ_COUNT; f++)
+//     {
+//         for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
+//         {
+//             if((g_aoTest[t].eCalcCandidate & eBitMask) != 0)
+//             {
+//                 uNumTests++;
+//                 fTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
+//             }
+//         }
+//     }
+
+//     if(uNumTests == 0) // we MUST have at least one of these
+//     {
+//         // break();
+//         return -99;
+//     }
+//     else
+//         return signedRoundX(fTestDiffsTotal / uNumTests);
+// }
+
 // ---------------------------------------------------------------------------
 void runIteration(enum freq_variant eFreq, u8 uTest, u8 uIterationNum)
 {
     prepareVDP(g_aoTest[uTest].eReadVRAM);
 
-    // break();
-
-
     commonStartForAllTests();
 
-    /* u16 */ nLength = (u16)g_pPCReg - (u16)&runTestAsmInMem;
-    /* u32 */ lInstructions = nLength/g_aoTest[uTest].uUnrollSingleInstructionSize;
+    u8 uUnrollSingleInstrSize = g_aoTest[uTest].uUnrollSingleInstructionSize;
+    u8 uUnrollInstrSize = g_aoTest[uTest].uUnrollInstructionsSize;
 
-    uUnrollSingleInstrSize = g_aoTest[uTest].uUnrollSingleInstructionSize;
-    uUnrollInstrSize = g_aoTest[uTest].uUnrollInstructionsSize;
-    nTestBlocksInSegment = 0;
-    lBlockCost = 0;
-    lTailcost = 0;
-    g_uRomExtraRounds2 = g_uRomExtraRounds;
-    if(g_uRomExtraRounds!=0)
+    u16 nLength = (u16)g_pPCReg - (u16)&runTestAsmInMem;
+    u32 lInstructions = nLength / uUnrollSingleInstrSize;
+
+    g_auFrameInstrResultXtra[eFreq][uTest][uIterationNum] = g_uExtraRounds;
+
+    if(g_uExtraRounds != 0)
     {
-        /* u16 */ nTestBlocksInSegment = (u16)((u32)(0x4000 - SIZE_TAIL_BLOCK) / uUnrollSingleInstrSize);
-        /* u32 */ lBlockCost = (u32)nTestBlocksInSegment * g_uRomExtraRounds;
-        /* u32 */ lTailcost = FRAME_CYCLES_TAIL_Z80 / g_aoTest[uTest].uRealSingleCost;
+        // u32 lTestBlocksInSegment = ((u32)(0x4000 - SIZE_TAIL_BLOCK) / uUnrollInstrSize);
+        u32 lTestBlocksInSegment = (u32)0x4000 / uUnrollInstrSize; // the above should be correct, but this one seems to empirically hit better (no decimals)
+        lTestBlocksInSegment = (lTestBlocksInSegment * uUnrollInstrSize) / uUnrollSingleInstrSize; // two divs on purpose
+        u32 lBlockCost = lTestBlocksInSegment * g_uExtraRounds;
 
         lInstructions += lBlockCost;
-        lInstructions += lTailcost; // make dependent on CPU!
     }
-
-    g_uTest = uTest;
-    g_uIterationNum = uIterationNum;
-    g_eFreq = eFreq;
-
-
-    // break();
 
     g_alFrameInstrResult[eFreq][uTest][uIterationNum] = lInstructions;
 }
 
 // ---------------------------------------------------------------------------
+void calcStatistics(void)
+{
+    for(u8 f = 0; f < FREQ_COUNT; f++)
+    {
+        for(u8  t = 0; t < arraysize(g_aoTest); t++)
+        {
+            u32 lTotal = 0;
+            u32 lMin = (u32)-1; // Wraps around to maximum u32 value
+            u32 lMax = 0;
+
+            u8 uExtra = 0;
+
+            for(u8 i=0; i<NUM_ITERATIONS; i++)
+            {
+                u32 n = g_alFrameInstrResult[f][t][i];
+
+                lTotal += n;
+
+                if(n < lMin)
+                    lMin = n;
+
+                if(n > lMax)
+                    lMax = n;
+
+                if(g_auFrameInstrResultXtra[f][t][i] > uExtra)
+                    uExtra = g_auFrameInstrResultXtra[f][t][i];
+            }
+
+            if(t<CALIBRATION_TESTS) // max out on the calibration tests.
+                g_afFrameInstrResultAvg[f][t] = lMax;
+            else
+                g_afFrameInstrResultAvg[f][t] = (float)lTotal/NUM_ITERATIONS;
+
+            g_alFrameInstrResultMin[f][t] = lMin;
+            g_alFrameInstrResultMax[f][t] = lMax;
+
+            g_auFrameInstrResultXtr2[f][t] = uExtra;
+        }
+    }
+
+
+    // Store the first test run as master timing for each frequency
+    for(u8 f = 0; f < FREQ_COUNT; f++)
+    {
+        g_afFrmTotalCyclesNoTail[f] = ((g_afFrameInstrResultAvg[f][0] + FRAME_COUNT_ADD_UP) * g_aoTest[0].uRealSingleCost +
+                                       (g_afFrameInstrResultAvg[f][1] + FRAME_COUNT_ADD_UP) * g_aoTest[1].uRealSingleCost) / 2;
+
+        u8 uFrmCycles = FRAME_CYCLES_TAIL_Z80;
+        if(g_eCPUMode == Z80_TURBO )
+            uFrmCycles += FRAME_CYCLES_TAIL_Z80_TURBO_ADD;
+
+        g_afFrmTotalCycles[f] = g_afFrmTotalCyclesNoTail[f] + (g_auFrameInstrResultXtr2[f][0] + g_auFrameInstrResultXtr2[f][1]) * uFrmCycles / 2;
+    }
+
+    // populate the testcost float array
+    for(u8 f = 0; f < FREQ_COUNT; f++)
+        for(u8 t = 0; t < arraysize(g_aoTest); t++)
+            g_afFinalTestCost[f][t] = (g_afFrmTotalCyclesNoTail[f] + g_aoTest[0].uStartupCycleCost - g_aoTest[t].uStartupCycleCost) / g_afFrameInstrResultAvg[f][t];
+
+    // s8 sROMDiffA = getTestCostDiff(CC_ROM_DIFF_A);
+    // s8 sROMDiffB = getTestCostDiff(CC_ROM_DIFF_B);
+    // g_sROMDiff = sROMDiffB - sROMDiffA; // ROM I/O
+
+    // s8 sROM2DiffA = getTestCostDiff(CC_ROM2_DIFF_A);
+    // s8 sROM2DiffB = getTestCostDiff(CC_ROM2_DIFF_B);
+    // g_sROM2Diff = sROM2DiffB - sROM2DiffA; // ROM fundament
+
+    // s8 sROM3DiffA = getTestCostDiff(CC_ROM3_DIFF_A);
+    // s8 sROM3DiffB = getTestCostDiff(CC_ROM3_DIFF_B);
+    // g_sROM3Diff = sROM3DiffB - sROM3DiffA; // ROM REFs
+
+    // g_sVDPDiff = getTestCostDiff(CC_VDP_DIFF);
+
+    u32 lAfter =  ((u32)g_uMinsH1 * 10 + g_uMinsL1) * 60 + ((u32)g_uSecondsH1 * 10 + g_uSecondsL1);
+    u32 lBefore = ((u32)g_uMinsH0 * 10 + g_uMinsL0) * 60 + ((u32)g_uSecondsH0 * 10 + g_uSecondsL0);
+
+    g_sVDPDiff2 = (s8)((lAfter - lBefore) - 12); // 12 is norm - expected for 0 delay
+}
+
+
+// ---------------------------------------------------------------------------
 //
 void runLongTest(void)
 {
+    u32 lStartTimeStamp = getTimeStamp();
+
+    g_bRTCWorking = lStartTimeStamp != g_lStartTimeStamp;
+
+    if(!g_bRTCWorking)
+        return;
+
 #ifdef ROM_OUTPUT_FILE
 
     disableInterrupt();
@@ -772,11 +994,13 @@ void runAllIterations(void)
 
         for(u8 t = 0; t < arraysize(g_aoTest); t++)
         {
-                                                                // // test!
-                                                                // if(t == 11)
-                                                                //     enableTurboIfAvailable(true);
-                                                                // else if(t == 12)
-                                                                //     enableTurboIfAvailable(false);
+
+#if DEBUG_INSERT_TURBO_MID_TEST==1
+    if(t == 11)
+        enableTurboIfAvailable(true);
+    else if(t == 12)
+        enableTurboIfAvailable(false);
+#endif
 
             setupTestInMemory(t);
 
@@ -785,96 +1009,13 @@ void runAllIterations(void)
         }
     }
 
-    // runLongTest();
+    if(g_eCPUMode == Z80_PLAIN)
+        runLongTest();
 
     setPALRefreshRate(bPALOrg);
 
     restoreOriginalISR();       // sets ROM in page 0 too
     restorePalette();           // uses BIOS. just in case the palette was messed up
-}
-
-// ---------------------------------------------------------------------------
-s8 getTestCostDiff(enum calc_candidate eBitMask)
-{
-    // find the fundamental ROM diff
-    u8 uNumTests = 0;
-    float fTestDiffsTotal = 0;
-
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-    {
-        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
-        {
-            if((g_aoTest[t].eCalcCandidate & eBitMask) != 0)
-            {
-                uNumTests++;
-                fTestDiffsTotal += (g_afFinalTestCost[f][t] - g_aoTest[t].uRealSingleCost);
-            }
-        }
-    }
-
-    if(uNumTests == 0) // we MUST have at least one of these
-        break();
-
-    return signedRoundX(fTestDiffsTotal / uNumTests);
-}
-
-// ---------------------------------------------------------------------------
-void calcStatistics(void)
-{
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-    {
-        for(u8  t = 0; t < arraysize(g_aoTest); t++)
-        {
-            u32 lTotal = 0;
-            u32 lMin = (u32)-1; // Wraps around to maximum u32 value
-            u32 lMax = 0;
-
-            for(u8 i=0; i<NUM_ITERATIONS; i++)
-            {
-                u32 n = g_alFrameInstrResult[f][t][i];
-
-                lTotal += n;
-
-                if(n < lMin)
-                    lMin = n;
-
-                if(n > lMax)
-                    lMax = n;
-            }
-
-            g_afFrameInstrResultAvg[f][t] = (float)lTotal/NUM_ITERATIONS;
-            g_alFrameInstrResultMin[f][t] = lMin;
-            g_alFrameInstrResultMax[f][t] = lMax;
-        }
-    }
-
-    // Store the first test run as master timing for each frequency
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-        g_afFrmTotalCycles[f] = (g_afFrameInstrResultAvg[f][0] * g_aoTest[0].uRealSingleCost + g_afFrameInstrResultAvg[f][1] * g_aoTest[1].uRealSingleCost)/2;
-
-    // populate the testcost float array
-    for(u8 f = 0; f < FREQ_COUNT; f++)
-        for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
-            g_afFinalTestCost[f][t] = (g_afFrmTotalCycles[f] - (g_aoTest[t].uStartupCycleCost - g_aoTest[0].uStartupCycleCost)) / g_afFrameInstrResultAvg[f][t];
-
-    s8 sROMDiffA = getTestCostDiff(CC_ROM_DIFF_A);
-    s8 sROMDiffB = getTestCostDiff(CC_ROM_DIFF_B);
-    g_sROMDiff = sROMDiffB - sROMDiffA; // ROM I/O
-
-    s8 sROM2DiffA = getTestCostDiff(CC_ROM2_DIFF_A);
-    s8 sROM2DiffB = getTestCostDiff(CC_ROM2_DIFF_B);
-    g_sROM2Diff = sROM2DiffB - sROM2DiffA; // ROM fundament
-
-    s8 sROM3DiffA = getTestCostDiff(CC_ROM3_DIFF_A);
-    s8 sROM3DiffB = getTestCostDiff(CC_ROM3_DIFF_B);
-    g_sROM3Diff = sROM3DiffB - sROM3DiffA; // ROM REFs
-
-    g_sVDPDiff = getTestCostDiff(CC_VDP_DIFF);
-
-    u32 lAfter =  ((u32)g_uMinsH1 * 10 + g_uMinsL1) * 60 + ((u32)g_uSecondsH1 * 10 + g_uSecondsL1);
-    u32 lBefore = ((u32)g_uMinsH0 * 10 + g_uMinsL0) * 60 + ((u32)g_uSecondsH0 * 10 + g_uSecondsL0);
-
-    g_sVDPDiff2 = (s8)((lAfter - lBefore) - 12); // 12 is norm - expected for 0 delay
 }
 
 // ---------------------------------------------------------------------------
@@ -901,16 +1042,19 @@ void printReport(void)
 
     u16 nTotalOverhead = (u16)FRAME_CYCLES_INT + FRAME_CYCLES_INT_KICK_OFF + FRAME_CYCLES_COMMON_START + g_aoTest[0].uStartupCycleCost;
 
+    if(g_eCPUMode == Z80_TURBO )
+        nTotalOverhead += FRAME_CYCLES_INT_TURBO_ADD + FRAME_CYCLES_INT_KICK_OFF_TURBO_ADD + FRAME_CYCLES_COMMON_START_TURBO_ADD;
+
     u32 lFrmTotalCyclesNTSC;
     u32 lFrmTotalCyclesPAL;
     s32 dDiffPAL;
     s32 dDiffNTSC;
 
     lFrmTotalCyclesNTSC = (u32)(g_afFrmTotalCycles[NTSC] + 0.5 + nTotalOverhead);
-    dDiffNTSC = (s32)(lFrmTotalCyclesNTSC - anFRAME_CYCLES_TARGET[NTSC]);
+    dDiffNTSC = (s32)(lFrmTotalCyclesNTSC - alFRAME_CYCLES_TARGET[g_eCPUMode][NTSC]);
 
     lFrmTotalCyclesPAL = (u32)(g_afFrmTotalCycles[PAL] + 0.5 + nTotalOverhead);
-    dDiffPAL = (s32)(lFrmTotalCyclesPAL - anFRAME_CYCLES_TARGET[PAL]);
+    dDiffPAL = (s32)(lFrmTotalCyclesPAL - alFRAME_CYCLES_TARGET[g_eCPUMode][PAL]);
 
     u8 szBuf1[50];
     u8 szBuf2[50];
@@ -918,13 +1062,13 @@ void printReport(void)
     sprintf(szBuf1,
             g_szSRPart,
             lFrmTotalCyclesNTSC,
-            anFRAME_CYCLES_TARGET[NTSC],
+            alFRAME_CYCLES_TARGET[g_eCPUMode][NTSC],
             dDiffNTSC);
 
     sprintf(szBuf2,
             g_szSRPart,
             lFrmTotalCyclesPAL,
-            anFRAME_CYCLES_TARGET[PAL],
+            alFRAME_CYCLES_TARGET[g_eCPUMode][PAL],
             dDiffPAL);
 
 
@@ -939,7 +1083,8 @@ void printReport(void)
 
     // Then the tests
     print(g_szReportCols);
-    for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
+    // for(u8 t = CALIBRATION_TESTS; t < arraysize(g_aoTest); t++)
+    for(u8 t = 0; t < arraysize(g_aoTest); t++)
     {
         IntWith2Decimals oAvgNTSC, oAvgPAL, oTestCostNTSC, oTestCostPAL;
 
@@ -974,27 +1119,47 @@ void printReport(void)
         printX(g_auBuffer);
     }
 
-    print(g_szNewline);
+    // print(g_szNewline);
 
-    u8* szOkOrNot;
+    // u8* szOkOrNot;
 
-    if((abs32(dDiffNTSC) > FRM_DIFF_THRESHOLD) || (abs32(dDiffPAL) > FRM_DIFF_THRESHOLD))
-        szOkOrNot = (u8*)"NOT OK";
+    // if((abs32(dDiffNTSC) > FRM_DIFF_THRESHOLD) || (abs32(dDiffPAL) > FRM_DIFF_THRESHOLD))
+    //     szOkOrNot = (u8*)"NOT OK";
+    // else
+    //     szOkOrNot = (u8*)"OK";
+
+//     u8* szRom;
+// #ifdef ROM_OUTPUT_FILE
+//     u8 szBuf[50];
+//     sprintf(szBuf, g_szSummaryROM, g_sROM2Diff, g_sROMDiff, g_sROM3Diff);
+//     szRom = (u8*)szBuf;
+// #else
+//     szRom = (u8*)g_szSummaryROM2;
+// #endif
+
+//     sprintf(g_auBuffer, g_szSummary, szOkOrNot, g_sVDPDiff, g_sVDPDiff2, szRom);
+
+
+    u8* szLast;
+    if(g_eCPUMode == Z80_PLAIN)
+    {
+        u8 szBuf[50];
+        if(g_bRTCWorking)
+        {
+            sprintf(szBuf, g_szLongInfo, g_sVDPDiff2);
+            szLast = (u8*)szBuf;
+        }
+        else
+            szLast = (u8*)g_szLongRTCError;
+    }
     else
-        szOkOrNot = (u8*)"OK";
+        szLast = (u8*)g_szLongTestTurbo;
 
-    u8* szRom;
+    sprintf(g_auBuffer, g_szLongTest, szLast);
+    printX(g_auBuffer);
 
-#ifdef ROM_OUTPUT_FILE
-    u8 szBuf[50];
-    sprintf(szBuf, g_szSummaryROM, g_sROM2Diff, g_sROMDiff, g_sROM3Diff);
-    szRom = (u8*)szBuf;
-#else
-    szRom = g_szSummaryROM2;
-#endif
-
-    sprintf(g_auBuffer, g_szSummary, szOkOrNot, g_sVDPDiff, g_sVDPDiff2, szRom);
-    // printX(g_auBuffer);
+    print(g_szNewline);
+    printX(g_szSummary);
 }
 
 // ---------------------------------------------------------------------------
@@ -1072,14 +1237,16 @@ u8 main(void)
     }
 
 
+#if DEBUG_FORCE_R800_FULLSPEED_IF_AVAILABLE==1
+enableR800FullSpeedIfAvailable(true);
+#endif
 
-                    // // Testing code for provoking various speeds
-                    // enableR800FullSpeedIfAvailable(true);
-
-                    // // Testing code for provoking various speeds
-                    // enableTurboIfAvailable(true);
+#if DEBUG_FORCE_TURBO_IF_AVAILABLE==1
+enableTurboIfAvailable(true);
+#endif
 
     g_eCPUMode = detectActiveCPU();
+    g_lStartTimeStamp = getTimeStamp();
 
     sprintf(g_auBuffer, g_szGreeting, NUM_ITERATIONS, g_szMedium, g_aszCPUModes[ g_eCPUMode ]);
     printX(g_auBuffer);

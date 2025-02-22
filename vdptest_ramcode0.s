@@ -12,7 +12,7 @@
     .globl      _g_pPCReg
     .globl      _g_pFncCurStartupBlock
     .globl      _runTestAsmInMem
-    .globl      _g_uRomExtraRounds
+    .globl      _g_uExtraRounds
 
 _UPPERCODE_BEGIN::
 
@@ -24,8 +24,13 @@ _commonStartForAllTests::
     push    ix
     ld      ix,#_runTestAsmInMem
 
-    ld      iy,#_g_uRomExtraRounds
-    ld      0(iy),#0
+    exx
+    ld      hl,#_g_uExtraRounds
+    ld      (hl),#0
+    exx
+    ; ld      iy,#_g_uExtraRounds
+    ; ld      0(iy),#0
+
 
     halt                                ; ensure that the following commands are not interrupted (di/ei is not safe!)
 
@@ -65,9 +70,20 @@ _customISR::
 
     xor 	a                       ; get status for sreg 0
     out		(VDPPORT1), a			; status register number
+
+; .rept 10 ; add 10*5=50 cycles to prevent delays between outs on faster CPUs
+;     nop
+; .endm
+
     ld		a, #0x8F				; VDP register R#15
     out		(VDPPORT1), a			; out VDP register number
     nop								; obey speed
+
+; .rept 10 ; add 10*5=50 cycles
+;     nop
+; .endm
+
+
     in		a, (VDPPORT1)			; read VDP S#n to reset VBLANK IRQ
 
     ld      a, (_g_bStorePCReg)     ; global switch on storing or not

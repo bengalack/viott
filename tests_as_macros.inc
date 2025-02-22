@@ -10,19 +10,28 @@
 ; interrupt occuring inside this tail will introduce an inaccuracy between 0 and 45
 ; cycles, and will only happen on fast (turbo and R800) modes. This is at maximum:
 ; 0,055% deviation (using quick 5 cycle test operation, smaller deviation on other tests)
-.macro macroTEST_TAIL   ; length:   7 bytes. 45 cycles.
-    di                  ; 1 byte,   5 cycles
-    inc 0(iy)           ; 3 bytes, 25 cycles (add the round-counter)
-    ei                  ; 1 byte,   5 cycles (ei happens after the next command)
+.macro macroTEST_TAIL   ; length:   7 bytes. 45 cycles. (FRAME_CYCLES_TAIL_Z80)
+    ; di                  ; 1 byte,   5 cycles
+    ; inc 0(iy)           ; 3 bytes, 25 cycles (add the round-counter)
+    ; ei                  ; 1 byte,   5 cycles (ei happens after the next command)
+    ; jp (ix)             ; 2 bytes, 10 cycles
+
+    di                  ; 1 byte
+    exx                 ; 1 byte
+    inc (hl)            ; 1 byte, +2 cycles on turbo!
+    exx                 ; 1 byte
+    ei                  ; 1 byte
     jp (ix)             ; 2 bytes, 10 cycles
 .endm
 
+
+
 .macro macroTEST_0_UNROLL
-    inc a
+    cpl
 .endm
 
 .macro macroTEST_1_UNROLL
-    inc hl
+    inc hl                      ; sync test. MUST NOT differ in speed on turbo (like adc (hl))
 .endm
 
 .macro macroTEST_2_UNROLL
@@ -34,7 +43,17 @@
 .endm
 
 .macro macroTEST_4_UNROLL
-    in a, (0x98)                 ; VDPIO. This will break the speed limits.
+    in a, (0x98)                ; VDPIO. This will break the speed limits.
+.endm
+
+.macro macroTEST_4_2_STARTUP
+    ld hl,#0xFB00               ; YSAVE #FB00 1 Light pen Y coordinate read from the device (internal use only).
+    ret
+.endm
+
+.macro macroTEST_4_2_UNROLL
+    ; adc (hl)                    ; gives one extra on turbo
+    inc (hl)
 .endm
 
 .macro macroTEST_5_STARTUP
@@ -49,8 +68,16 @@
     in a, (0x99)                ; VDPPORT1. This will break the speed limits.
 .endm
 
+.macro macroTEST_5_2_UNROLL
+    adc a, 0(iy)
+.endm
+
 .macro macroTEST_6_UNROLL
     out (0x9A), a               ; VDPPALETTE. This will break the speed limits.
+.endm
+
+.macro macroTEST_6_2_UNROLL
+    bit 0, 0(iy)
 .endm
 
 .macro macroTEST_7_STARTUP      ; Sets VDPSTREAM-port to constantly overwrite reg 32 (SX: X-coordinate to be transferred (LOW))
@@ -63,6 +90,10 @@
 
 .macro macroTEST_7_UNROLL
     out (0x9B), a               ; VDPSTREAM. This will break the speed limits.
+.endm
+
+.macro macroTEST_7_2_UNROLL
+    cp #5
 .endm
 
 .macro macroTEST_8_STARTUP
@@ -84,7 +115,9 @@
 .endm
 
 .macro macroTEST_B_STARTUP
-    ld hl, #0x8000              ; Reads RAM in dos, ROM in ROM. 22
+    ld hl, #0x8000              ; Reads RAM in dos, ROM in ROM.
+    ld d, h
+    ld e, l
     ret
 .endm
 
@@ -92,6 +125,7 @@
     cpi
 .endm
 
+; =============================================================================
 
 .macro macroTEST_LONG_UNROLL
     out (0x9b),a
@@ -100,12 +134,14 @@
 .endm
 
 ; length of below block is 7 (SIZE_LONGTEST_TAIL)
+; these cycles should be part of the calculation of available cycles in a frame
+; but NOT part of calculation of a test duration / instruction cost
 .macro macroTEST_LONG_TAIL
     dec de
     ld a,d
     or e
-    jp nz,_runTestAsmInMem
-    ret
+    jp nz,_runTestAsmInMem  ; cycles: 28
+    ret                     ; cycles: 39
 .endm
 
 ; TODO: Adapt for turbo speeds also

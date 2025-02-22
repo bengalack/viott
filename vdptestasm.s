@@ -67,6 +67,12 @@ _setupClockForDigitRead::
 
 	ret
 
+; u8 _readClock( u8 uBlock0RegID );
+_readClock::
+    call    _setupClockForDigitRead
+	in		a,(RTC_PORT_DATA)
+	and		#0x0F
+    ret
 
 ; Cost: 60+73 = 133 cycles
 ; trashes AF, AF'
