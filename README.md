@@ -6,8 +6,8 @@ __Concept 1:__
 <img width="60%" src="img/main_method.png" />
 
 * This (main) test counts how many of each instruction (from a set of selected ones) that can be executed in one frame.
-* We measure multiple sets of the tests to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations. Default is 4 iterations in a set.
-* Running the code from internal memory is running at optimal speed with no delays, hence, ALL code that is not the unrolled instructions, are put in RAM, this also includes any test setup code and the ISR both in DOS and in ROM mode.
+* We measure multiple sets of the tests to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average and max values for further calculations.
+* Running the code from internal memory is running at optimal speed with no delays, hence, ALL code that is not the "unrolled instructions", are put in RAM, this also includes any test setup code and the ISR both in DOS and in ROM mode.
 * The tests are run in both 50Hz and 60Hz (screen will blink during test runs).
 
 __Concept 2, the long test:__
