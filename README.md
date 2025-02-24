@@ -1,5 +1,5 @@
 # VIOTT - VDP I/O Timing Tester
-Test **MSX2 (and above)** VDPs for added wait cycles - typically are reported on computers using the [MSX-Engine T9769A/B/C](https://www.msx.org/wiki/Toshiba_T9769). Turns out we can use it to measure instruction cycle cost in general. Written in C with help from assembly.
+Test **MSX2 (and above)** VDPs for added wait cycles - typically reported on computers using the [MSX-Engine T9769A/B/C](https://www.msx.org/wiki/Toshiba_T9769). Turns out we can use it to measure instruction cycle cost in general. Written in C with help from assembly.
 
 __Concept 1:__
 
