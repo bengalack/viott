@@ -16,11 +16,7 @@
 // ROM-version. The ROM-buildscript must also include info about any added segment.
 //
 // The two first tests are used to determine the amount of cycles available
-// in a frame. If we only used one, it would have the accuracy in the range [0,5]
-// as the test-instruction takes 5 cycles. By also using a test with accuracy in
-// the range [0,7] we can get the accuracy down to range [0,3] which proves
-// to conclude better on the statistics on some machines. These tests must NOT
-// remotely affect/use ROM.
+// in a frame. These tests must be run from internal RAM.
 //
 // Assumptions:
 //  * There are no line interrupts enabled when we start (DOS)
