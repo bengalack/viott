@@ -1,54 +1,28 @@
 # VIOTT - VDP I/O Timing Tester
-Test **MSX2 (and above)** VDPs for added wait cycles - which are reported on various systems/engines. Written in C with help from assembly.
+Test **MSX2 (and above)** VDPs for added wait cycles - typically are reported on computers using the [MSX-Engine T9769A/B/C](https://www.msx.org/wiki/Toshiba_T9769). Turns out we can use it to measure instruction cycle cost in general. Written in C with help from assembly.
 
-__The concept__: We measure the amount of cycles we can spend during a frame, by using normal, "safe" non-I/O instructions. Then we run frames with I/O instructions, and by measuring how many instructions we were able to execute during that time, we find the cost of each I/O instruction.
+__Concept 1:__
 
-I enable a custom, lightweight ISR, add tons of unrolled I/O-commands, and read the value of the PC-register when the frame is finished.
+<img width="60%" src="img/main_method.png" />
 
-    I/O command cycle cost = available frame total time / number of I/O instructions executed
-
-**Format/Medium:** In v1.3 I added support for ROM as well (ASCII16). This made the code a bit more complex, sadly. From now on, each test needs to partly be defined two places - one for RAM setup at runtime and one for ROM segments, prepared up front. ROM version was added to find if there are differences when code reside in ROM vs RAM.
-
-**Assumptions:**
-* The cost of kicking off an interrupt: **14 cycles** ([source](http://www.z80.info/interrup.htm)). Not used for the cycle cost calculations, but used for the simple "available cycles per frame" calculation and comparison. 
+* This (main) test counts how many of each instruction (from a set of selected ones) that can be executed in one frame.
+* We measure multiple sets of the tests to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations. Default is 4 iterations in a set.
 * Running the code from internal memory is running at optimal speed with no delays, hence, ALL code that is not the unrolled instructions, are put in RAM, this also includes any test setup code and the ISR both in DOS and in ROM mode.
+* The tests are run in both 50Hz and 60Hz (screen will blink during test runs).
 
-We measure multiple sets of the tests to see if there are any deviations (as [the interrupt seems to be a bit inaccurate at times](https://www.msx.org/forum/msx-talk/hardware/msx-engine-t9769b-does-it-really-add-2-wait-cycles#comment-470398)), and we then use the average for further calculations. Default is 16 iterations in a set.
+__Concept 2, the long test:__
 
-The tests are run in both 50Hz and 60Hz (screen will blink during change). Colors will also change when we do testing towards the vdp palette port. After a switch of frequency we do a halt. Tests has shown that not doing this, skews the data measured directly after the frequency change.
+<img width="60%"  src="img/second_method.png" />
 
-### Output examples ###
-__Panasonic A1-ST turboR:__
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_31_a1-st.JPEG" />
+* We execute so many unrolled outs that a +1 wait cycle on an I/O instruction will constitute one full second delay one VDPs with wait cycles, using NTSC. It spans 700+ frames. This second test is to validate other VDP tests. One test only and currently only used for VDP I/O, and it runs from RAM in dos mode and from ROM in rom-mode.
 
-__Panasonic FS-A1 MSX2:__
-<img src="https://raw.githubusercontent.com/bengalack/viott/refs/heads/main/img/v1_31_fs-a1.JPEG" />
+### Understanding the output ###
 
-### Briefly on the tests ###
-...as in [tests_as_macros.inc](tests_as_macros.inc)
+<img src="img/legend.png" />
 
-1. out98: unrolled `out (0x98), a`
-2. in98: set vdp up for reading an address + unrolled `in a, (0x98)`
-3. in98x: (wrongly) set vdp up for writing to an address + unrolled `in a, (0x98)`
-4. in99: set vdp regs up for reading + unrolled `in a, (0x99)`
-5. out9A: massive palette color changes by unrolled `out (0x9A), a`
-6. out9B: set vdp in stream mode to constantly update reg #32, then unrolled `out (0x9B), a`
-7. outi98FMT: set HL to ROM or RAM according to media and C to 0x98, then unrolled `outi`
-8. outi98RAM: set HL to RAM and C to 0x98, then unrolled `outi` forced to run from internal RAM
-9. !in06FMT: run unrolled `in a, (0x06)`. 0x06 is a random port seemingly not in use
-10. !in06RAM: run unrolled `in a, (0x06)`, forced to run from internal RAM
-11. !incaFMT: run unrolled `inc a` (this test is to check the basic performance)
-12. !incaRAM: run unrolled `inc a`, forced to run from internal RAM
-13. !cpiFMT: run unrolled `cpi` (this test test the use of registers referencing values pointed to in memory)
-14. !cpiRAM: run unrolled `cpi`, forced to run from internal RAM
+### Test results on various machines ###
 
-__Naming of the tests:__
-* 'FMT' means format (or media), so the test follows the format. DOS: RAM. ROM: ROM.
-* 'RAM' means that the test is forced to run in RAM even if the program comes on a cartridge.
-* The ! means that the test is not a VDP test, for comparisons (and ROM performance testing)
-
-### Background ###
-* It all stems from the waitcycles reported on MSX-Engine T9769A/B/C: https://www.msx.org/wiki/Toshiba_T9769 
+<img src="img/v1.4/1_4_collection.png" />
 
 ### Dependencies & Build ##
 * Tried to make this independent of various libraries. This to make everything as light and transparent as possible.
@@ -61,9 +35,6 @@ __Naming of the tests:__
 ### Target platform / environment ###
 * The _ROM_-variant (recommended) is a megarom using the ASCII-16 mapper. Find rom-file in `rom/`
 * For the _MSXDOS_ variant you must provide DOS yourself. Find com-file in `dska/`.
-
-### Weaknesses ###
-* There are probably real world circumstances that are not covered in the tests (give me a hint, and I'll see if we can add better tests).
 
 ### Download executable ###
 You can download the latest pre-built `.com` file here: [/dska/viott.com](https://github.com/bengalack/viott/raw/refs/heads/main/dska/viott.com) and `.rom` here: [/rom/viott.rom](https://github.com/bengalack/viott/raw/refs/heads/main/rom/viott.rom)
