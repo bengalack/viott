@@ -452,7 +452,6 @@ float                   g_afFrameInstrResultAvg [FREQ_COUNT][arraysize(g_aoTest)
 u32                     g_alFrameInstrResultMin [FREQ_COUNT][arraysize(g_aoTest)];
 u32                     g_alFrameInstrResultMax [FREQ_COUNT][arraysize(g_aoTest)];
 u8                      g_auFrameInstrResultXtra[FREQ_COUNT][arraysize(g_aoTest)][NUM_ITERATIONS];
-float                   g_afFrameInstrResultXtra[FREQ_COUNT][arraysize(g_aoTest)];
 u8                      g_auFrameInstrResultXtr2[FREQ_COUNT][arraysize(g_aoTest)];
 float                   g_afFinalTestCost       [FREQ_COUNT][arraysize(g_aoTest)];
 s16                     g_iVDPDiff;
